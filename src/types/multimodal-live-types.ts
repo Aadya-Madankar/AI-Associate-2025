@@ -4,8 +4,12 @@ import type {
   GenerationConfig,
   GenerativeContentBlob,
   Part,
-  Tool,
 } from "@google/generative-ai";
+
+// Extend the Tool type to allow googleSearch
+export type Tool =
+  | { googleSearch: Record<string, unknown> }
+  | Exclude<import("@google/generative-ai").Tool, { googleSearch: any }>;
 
 export type LiveConfig = {
   model: string;
