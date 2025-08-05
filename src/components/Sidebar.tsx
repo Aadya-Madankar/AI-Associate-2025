@@ -1,25 +1,11 @@
 import { motion } from "framer-motion";
-import { 
-  Mic, 
-  Moon,
-  Sun,
-  Settings
-} from "lucide-react";
-import { Button } from "./ui/button";
+import { Mic } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 
 export function Sidebar() {
-  const { theme, toggleTheme } = useTheme();
+  useTheme();
 
-  const handleSettingsClick = () => {
-    alert("Settings panel coming soon! 🛠️");
-    console.log("Settings clicked - Current theme:", theme);
-  };
 
-  const handleThemeToggle = () => {
-    console.log("Theme toggle clicked - Current theme:", theme, "-> Switching to:", theme === 'dark' ? 'light' : 'dark');
-    toggleTheme();
-  };
 
   return (
     <motion.div

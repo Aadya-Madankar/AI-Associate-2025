@@ -11,7 +11,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { PolkaDotSphere } from "./PolkaDotSphere"; // Import our new component
 
 interface VoiceInterfaceProps {
-  videoRef: React.RefObject<HTMLVideoElement>;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   onVideoStreamChange: (stream: MediaStream | null) => void;
 }
 
@@ -176,7 +176,7 @@ export function VoiceInterface({ videoRef, onVideoStreamChange }: VoiceInterface
       const ctx = canvas.getContext("2d")!;
       canvas.width = video.videoWidth * 0.25;
       canvas.height = video.videoHeight * 0.25;
-      if (canvas.width + canvas.height > 0) {
+      if (canvas.width + canvas.height > 0 && videoRef.current) {
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const base64 = canvas.toDataURL("image/jpeg", 1.0);
         const data = base64.slice(base64.indexOf(",") + 1, Infinity);

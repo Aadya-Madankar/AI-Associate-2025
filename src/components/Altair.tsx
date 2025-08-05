@@ -44,7 +44,6 @@ function AltairComponent() {
         ],
       },
       tools: [
-        { googleSearch: {} },
         { functionDeclarations: [declaration] },
       ],
     });

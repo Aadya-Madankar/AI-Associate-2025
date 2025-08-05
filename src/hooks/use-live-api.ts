@@ -44,9 +44,7 @@ export function useLiveAPI({
         },
       ],
     },
-    tools: [
-      { googleSearch: {} },
-    ],
+    tools: [],
   });
   const [volume, setVolume] = useState(0);
 
