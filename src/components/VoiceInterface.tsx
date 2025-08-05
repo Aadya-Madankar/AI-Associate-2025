@@ -299,15 +299,15 @@ export function VoiceInterface({ videoRef, onVideoStreamChange }: VoiceInterface
   ), [connected, isRecording, inVolume, volume, isUserSpeaking, isAssistantSpeaking, handleConnect]);
 
   return (
-    <div className="h-full grid grid-cols-3 gap-6">
+    <div className="h-full w-full grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-6 px-1 sm:px-4 md:px-8 lg:px-12 max-w-full">
       {/* Hidden canvas for video processing */}
       <canvas ref={renderCanvasRef} className="hidden" />
 
       {/* Left Column - Main Voice Interface */}
-      <div className="col-span-2 flex flex-col items-center justify-center space-y-8">
+      <div className="col-span-1 sm:col-span-2 flex flex-col items-center justify-center space-y-4 sm:space-y-8 w-full sm:w-auto">
         
         {/* Main Content Area - Either Video or Polka Dot Sphere */}
-        <div className="relative flex items-center justify-center">
+        <div className="relative flex items-center justify-center w-full sm:w-auto">
           <AnimatePresence mode="wait" initial={false}>
             {isVideoActive ? (
               <motion.div
@@ -439,8 +439,8 @@ export function VoiceInterface({ videoRef, onVideoStreamChange }: VoiceInterface
       </div>
 
       {/* Right Column - Conversation Panel (unchanged) */}
-      <div className="col-span-1">
-        <div className="h-full bg-slate-800/50 dark:bg-slate-800/50 light:bg-conversation-light backdrop-blur-xl border border-slate-700/50 dark:border-slate-700/50 light:border-emerald-200/30 rounded-2xl flex flex-col shadow-2xl transition-all duration-500">
+      <div className="col-span-1 mt-4 sm:mt-0">
+        <div className="h-full bg-slate-800/50 dark:bg-slate-800/50 light:bg-conversation-light backdrop-blur-xl border border-slate-700/50 dark:border-slate-700/50 light:border-emerald-200/30 rounded-2xl flex flex-col shadow-2xl transition-all duration-500 min-h-[300px] sm:min-h-0">
           {/* Conversation Header */}
           <div className="p-4 border-b border-slate-700/50 dark:border-slate-700/50 light:border-emerald-200/30">
             <div className="flex items-center justify-between">
@@ -457,8 +457,8 @@ export function VoiceInterface({ videoRef, onVideoStreamChange }: VoiceInterface
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-            <div className="space-y-4">
+          <ScrollArea className="flex-1 p-2 sm:p-4 max-h-60 sm:max-h-none" ref={scrollRef}>
+            <div className="space-y-2 sm:space-y-4">
               {messages.length === 0 ? (
                 <div className="text-center text-slate-400 dark:text-slate-400 light:text-emerald-600 py-8">
                   <p>No messages yet</p>
@@ -473,7 +473,7 @@ export function VoiceInterface({ videoRef, onVideoStreamChange }: VoiceInterface
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] p-3 rounded-lg ${
+                    className={`max-w-[95vw] sm:max-w-[80%] p-2 sm:p-3 rounded-lg ${
                         message.type === 'user'
                           ? 'bg-blue-600 dark:bg-blue-600 light:bg-emerald-600 text-white shadow-lg'
                           : 'bg-slate-700/50 dark:bg-slate-700/50 light:bg-emerald-100/50 text-slate-200 dark:text-slate-200 light:text-emerald-800 border border-slate-600/50 dark:border-slate-600/50 light:border-emerald-200/50'
@@ -491,21 +491,21 @@ export function VoiceInterface({ videoRef, onVideoStreamChange }: VoiceInterface
           </ScrollArea>
 
           {/* Input */}
-          <div className="p-4 border-t border-slate-700/50 dark:border-slate-700/50 light:border-emerald-200/30">
-            <div className="flex space-x-2">
+          <div className="p-2 sm:p-4 border-t border-slate-700/50 dark:border-slate-700/50 light:border-emerald-200/30">
+            <div className="flex space-x-1 sm:space-x-2">
               <Input
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type a message..."
                 disabled={!connected}
-                className="bg-slate-700/50 dark:bg-slate-700/50 light:bg-emerald-50/50 border-slate-600/50 dark:border-slate-600/50 light:border-emerald-200/50 text-slate-200 dark:text-slate-200 light:text-emerald-800 placeholder:text-slate-400 dark:placeholder:text-slate-400 light:placeholder:text-emerald-500 focus:border-blue-500/50 dark:focus:border-blue-500/50 light:focus:border-emerald-400/50 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 light:focus:ring-emerald-500/20"
+                className="bg-slate-700/50 dark:bg-slate-700/50 light:bg-emerald-50/50 border-slate-600/50 dark:border-slate-600/50 light:border-emerald-200/50 text-slate-200 dark:text-slate-200 light:text-emerald-800 placeholder:text-slate-400 dark:placeholder:text-slate-400 light:placeholder:text-emerald-500 focus:border-blue-500/50 dark:focus:border-blue-500/50 light:focus:border-emerald-400/50 focus:ring-blue-500/20 dark:focus:ring-blue-500/20 light:focus:ring-emerald-500/20 text-xs sm:text-base"
               />
               <Button
                 onClick={handleSend}
                 disabled={!connected || !inputText.trim()}
                 size="icon"
-                className="bg-blue-600 dark:bg-blue-600 light:bg-emerald-600 hover:bg-blue-700 dark:hover:bg-blue-700 light:hover:bg-emerald-700 disabled:bg-slate-600 disabled:text-slate-400 transition-all duration-200"
+                className="bg-blue-600 dark:bg-blue-600 light:bg-emerald-600 hover:bg-blue-700 dark:hover:bg-blue-700 light:hover:bg-emerald-700 disabled:bg-slate-600 disabled:text-slate-400 transition-all duration-200 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center"
               >
                 <Send className="h-4 w-4" />
               </Button>
