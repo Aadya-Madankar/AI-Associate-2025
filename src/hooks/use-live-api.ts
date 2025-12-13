@@ -30,7 +30,7 @@ export function useLiveAPI({
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
   const [connected, setConnected] = useState(false);
   const [config, setConfig] = useState<LiveConfig>({
-    model: "models/gemini-2.0-flash-exp",
+    model: "models/gemini-2.5-flash-native-audio-preview-12-2025",
     generationConfig: {
       responseModalities: "audio",
       speechConfig: {
