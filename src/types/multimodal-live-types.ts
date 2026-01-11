@@ -6,10 +6,26 @@ import type {
   Part,
 } from "@google/generative-ai";
 
-// Extend the Tool type to allow googleSearch
+// Extend the Tool type to allow googleSearch, codeExecution, and functionDeclarations
 export type Tool =
   | { googleSearch: Record<string, unknown> }
-  | Exclude<import("@google/generative-ai").Tool, { googleSearch: any }>;
+  | { codeExecution: Record<string, unknown> }
+  | { functionDeclarations: FunctionDeclaration[] }
+  | Exclude<import("@google/generative-ai").Tool, { googleSearch: any } | { codeExecution: any }>;
+
+// Function declaration type for custom tools
+export type FunctionDeclaration = {
+  name: string;
+  description: string;
+  parameters?: {
+    type: string;
+    properties?: Record<string, {
+      type: string;
+      description?: string;
+    }>;
+    required?: string[];
+  };
+};
 
 export type LiveConfig = {
   model: string;
@@ -19,12 +35,21 @@ export type LiveConfig = {
 };
 
 export type LiveGenerationConfig = GenerationConfig & {
-  responseModalities: "text" | "audio" | "image";
+  responseModalities: ("text" | "audio" | "image")[] | "text" | "audio" | "image";
   speechConfig?: {
     voiceConfig?: {
       prebuiltVoiceConfig?: {
-        voiceName: "Puck" | "Charon" | "Kore" | "Fenrir" | "Aoede" | string;
+        voiceName: string;
       };
+    };
+  };
+  // Media resolution for video/image input
+  mediaResolution?: "MEDIA_RESOLUTION_UNSPECIFIED" | "MEDIA_RESOLUTION_LOW" | "MEDIA_RESOLUTION_MEDIUM" | "MEDIA_RESOLUTION_HIGH";
+  // Context window compression for long conversations
+  contextWindowCompression?: {
+    triggerTokens?: string;
+    slidingWindow?: {
+      targetTokens?: string;
     };
   };
 };
@@ -63,6 +88,7 @@ export type ToolResponse = ToolResponseMessage["toolResponse"];
 export type LiveFunctionResponse = {
   response: object;
   id: string;
+  name?: string; // Optional name field as per official SDK
 };
 
 /** Incoming types */

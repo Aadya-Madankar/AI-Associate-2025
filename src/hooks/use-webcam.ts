@@ -27,11 +27,17 @@ export function useWebcam(): UseMediaStreamResult {
   }, [stream]);
 
   const start = async () => {
+    // Request HD resolution for clear vision analysis
     const mediaStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+      video: {
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+        facingMode: "user"
+      },
     });
     setStream(mediaStream);
     setIsStreaming(true);
+    console.log(`[Webcam] Started at ${mediaStream.getVideoTracks()[0]?.getSettings().width}x${mediaStream.getVideoTracks()[0]?.getSettings().height}`);
     return mediaStream;
   };
 

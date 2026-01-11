@@ -7,21 +7,31 @@ export class AudioStreamer {
   public audioQueue: Float32Array[] = [];
   private isPlaying: boolean = false;
   private sampleRate: number = 24000;
-  private bufferSize: number = 7680;
+  private bufferSize: number = 2400; // Reduced for lower latency (100ms at 24kHz)
   private processingBuffer: Float32Array = new Float32Array(0);
   private scheduledTime: number = 0;
   public gainNode: GainNode;
   public source: AudioBufferSourceNode;
   private isStreamComplete: boolean = false;
   private checkInterval: number | null = null;
-  private initialBufferTime: number = 0.1; //0.1 // 100ms initial buffer
+  private initialBufferTime: number = 0.02; // Reduced from 0.05 to 0.02 for faster start
   private endOfQueueAudioSource: AudioBufferSourceNode | null = null;
-  public onComplete = () => {};
+  public onComplete = () => { };
+  private lowPassFilter: BiquadFilterNode;
 
   constructor(public context: AudioContext) {
     this.gainNode = this.context.createGain();
     this.source = this.context.createBufferSource();
-    this.gainNode.connect(this.context.destination);
+
+    // Low-pass filter to reduce static
+    this.lowPassFilter = this.context.createBiquadFilter();
+    this.lowPassFilter.type = "lowpass";
+    this.lowPassFilter.frequency.value = 8000;
+    this.lowPassFilter.Q.value = 0.7;
+
+    this.gainNode.connect(this.lowPassFilter);
+    this.lowPassFilter.connect(this.context.destination);
+
     this.addPCM16 = this.addPCM16.bind(this);
   }
 
@@ -32,11 +42,8 @@ export class AudioStreamer {
   ): Promise<AudioStreamer> {
     let workletsRecord = registeredWorklets.get(this.context);
     if (workletsRecord && workletsRecord[workletName]) {
-      // the worklet already exists on this context
-      // add the new handler to it
       workletsRecord[workletName].handlers.push(handler);
       return Promise.resolve(this);
-      //throw new Error(`Worklet ${workletName} already exists on context`);
     }
 
     if (!workletsRecord) {
@@ -44,12 +51,10 @@ export class AudioStreamer {
       workletsRecord = registeredWorklets.get(this.context)!;
     }
 
-    // create new record to fill in as becomes available
     workletsRecord[workletName] = { handlers: [handler] };
     const src = createWorketFromSrc(workletName, workletSrc);
     await this.context.audioWorklet.addModule(src);
     const worklet = new AudioWorkletNode(this.context, workletName);
-    //add the node into the map
     workletsRecord[workletName].node = worklet;
     return this;
   }
@@ -81,7 +86,6 @@ export class AudioStreamer {
 
     if (!this.isPlaying) {
       this.isPlaying = true;
-      // Initialize scheduledTime only when we start playing
       this.scheduledTime = this.context.currentTime + this.initialBufferTime;
       this.scheduleNextBuffer();
     }
@@ -98,7 +102,7 @@ export class AudioStreamer {
   }
 
   private scheduleNextBuffer() {
-    const SCHEDULE_AHEAD_TIME = 0.2;
+    const SCHEDULE_AHEAD_TIME = 0.05; // Reduced from 0.1 to 0.05 for lower latency
     while (
       this.audioQueue.length > 0 &&
       this.scheduledTime < this.context.currentTime + SCHEDULE_AHEAD_TIME
@@ -143,7 +147,6 @@ export class AudioStreamer {
         });
       }
 
-      // Ensure we never schedule in the past
       const startTime = Math.max(this.scheduledTime, this.context.currentTime);
       source.start(startTime);
       this.scheduledTime = startTime + audioBuffer.duration;
@@ -197,7 +200,7 @@ export class AudioStreamer {
     setTimeout(() => {
       this.gainNode.disconnect();
       this.gainNode = this.context.createGain();
-      this.gainNode.connect(this.context.destination);
+      this.gainNode.connect(this.lowPassFilter);
     }, 200);
   }
 

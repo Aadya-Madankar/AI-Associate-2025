@@ -1,97 +1,506 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 262.1 83.3% 57.8%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 262.1 83.3% 57.8%;
-  }
-}
+/* ========================================
+   XENO Live - Premium Design System
+   ======================================== */
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    transition: all 0.7s ease;
-  }
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 222 47% 11%;
+        --card: 0 0% 100%;
+        --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
+        --primary: 221 83% 53%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222 47% 11%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215 16% 47%;
+        --accent: 210 40% 96%;
+        --accent-foreground: 222 47% 11%;
+        --destructive: 0 84% 60%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 221 83% 53%;
+        --radius: 0.75rem;
+    }
+
+    .dark {
+        --background: 224 71% 4%;
+        --foreground: 210 40% 98%;
+        --card: 224 71% 6%;
+        --card-foreground: 210 40% 98%;
+        --popover: 224 71% 6%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 217 91% 60%;
+        --primary-foreground: 222 47% 5%;
+        --secondary: 217 33% 17%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217 33% 17%;
+        --muted-foreground: 215 20% 65%;
+        --accent: 217 33% 17%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 63% 31%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217 33% 17%;
+        --input: 217 33% 17%;
+        --ring: 224 76% 48%;
+    }
 }
 
-/* Beautiful green gradient theme */
-.light body {
-  background: linear-gradient(135deg, #1f4037, #99f2c8) !important;
-  background-attachment: fixed !important;
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
 }
 
-.dark body {
-  background: linear-gradient(135deg, #0f172a, #1e293b, #0f172a) !important;
-  background-attachment: fixed !important;
+/* ========================================
+   Background & Mesh Gradients
+   ======================================== */
+
+.bg-mesh-dark {
+    background:
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.08) 0%, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(34, 197, 94, 0.05) 0%, transparent 50%),
+        #030712;
 }
 
-/* Smooth theme transitions */
-* {
-  transition: background-color 0.7s ease, 
-              background-image 0.7s ease, 
-              color 0.7s ease, 
-              border-color 0.7s ease,
-              box-shadow 0.7s ease !important;
+.bg-mesh-light {
+    background:
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.05) 0%, transparent 50%),
+        radial-gradient(at 0% 100%, rgba(34, 197, 94, 0.03) 0%, transparent 50%),
+        #fafbfc;
 }
 
-/* Custom animations for voice interface */
-@keyframes voice-pulse {
-  0%, 100% { 
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% { 
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
+/* ========================================
+   Glassmorphism Effects
+   ======================================== */
+
+.glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.voice-pulse {
-  animation: voice-pulse 2s ease-in-out infinite;
+.glass-dark {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 4px 24px rgba(0, 0, 0, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.glass-hover:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ========================================
+   Neumorphism Effects
+   ======================================== */
+
+.neu-button {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.1));
+    box-shadow:
+        4px 4px 12px rgba(0, 0, 0, 0.3),
+        -2px -2px 8px rgba(255, 255, 255, 0.05);
+}
+
+.neu-button:active {
+    box-shadow:
+        inset 2px 2px 6px rgba(0, 0, 0, 0.3),
+        inset -1px -1px 4px rgba(255, 255, 255, 0.05);
+}
+
+.neu-inset {
+    box-shadow:
+        inset 3px 3px 8px rgba(0, 0, 0, 0.25),
+        inset -2px -2px 6px rgba(255, 255, 255, 0.03);
+}
+
+/* ========================================
+   Gradient Accents
+   ======================================== */
+
+.gradient-primary {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+}
+
+.gradient-success {
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.gradient-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.gradient-border {
+    position: relative;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(168, 85, 247, 0.5));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* ========================================
+   Glow Effects
+   ======================================== */
+
+.glow-primary {
+    box-shadow:
+        0 0 20px rgba(99, 102, 241, 0.4),
+        0 0 40px rgba(99, 102, 241, 0.2),
+        0 0 60px rgba(99, 102, 241, 0.1);
+}
+
+.glow-success {
+    box-shadow:
+        0 0 20px rgba(34, 197, 94, 0.4),
+        0 0 40px rgba(34, 197, 94, 0.2);
+}
+
+.glow-danger {
+    box-shadow:
+        0 0 20px rgba(239, 68, 68, 0.4),
+        0 0 40px rgba(239, 68, 68, 0.2);
+}
+
+.glow-text {
+    text-shadow: 0 0 20px currentColor;
+}
+
+/* ========================================
+   Animations
+   ======================================== */
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes gradient-shift {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-in-scale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
+
+.animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.animate-slide-in-right {
+    animation: slide-in-right 0.3s ease-out forwards;
+}
+
+/* ========================================
+   Scrollbar
+   ======================================== */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ========================================
+   Typography
+   ======================================== */
+
+.text-gradient {
+    background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.heading-xl {
+    @apply text-4xl md:text-5xl font-bold tracking-tight;
+}
+
+.heading-lg {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+}
+
+.heading-md {
+    @apply text-xl md:text-2xl font-semibold;
+}
+
+.body-lg {
+    @apply text-base md:text-lg leading-relaxed;
+}
+
+.body-sm {
+    @apply text-sm leading-relaxed;
+}
+
+.label {
+    @apply text-xs font-medium uppercase tracking-wider text-white/50;
+}
+
+/* ========================================
+   Status Indicators
+   ======================================== */
+
+.status-online {
+    @apply relative;
+}
+
+.status-online::after {
+    content: '';
+    @apply absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    animation: pulse-ring 2s infinite;
+}
+
+.status-dot {
+    @apply w-2 h-2 rounded-full;
+}
+
+.status-dot.online {
+    @apply bg-green-500;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.status-dot.offline {
+    @apply bg-gray-500;
+}
+
+.status-dot.busy {
+    @apply bg-yellow-500;
+    box-shadow: 0 0 8px rgba(234, 179, 8, 0.5);
+}
+
+/* ========================================
+   Interactive Elements
+   ======================================== */
+
+.btn-icon {
+    @apply flex items-center justify-center rounded-xl transition-all duration-200;
+    @apply hover:scale-105 active:scale-95;
+}
+
+.btn-primary {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium;
+    @apply shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30;
+    @apply transition-all duration-200 hover:-translate-y-0.5;
+}
+
+.btn-secondary {
+    @apply bg-white/5 hover:bg-white/10 text-white/80 hover:text-white;
+    @apply border border-white/10 hover:border-white/20;
+    @apply transition-all duration-200;
+}
+
+.btn-ghost {
+    @apply bg-transparent hover:bg-white/5 text-white/60 hover:text-white;
+    @apply transition-all duration-200;
+}
+
+/* ========================================
+   Sidebar Styles
+   ======================================== */
+
+.sidebar {
+    @apply w-72 h-screen flex flex-col;
+    @apply border-r border-white/5;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+}
+
+.sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl;
+    @apply text-white/70 hover:text-white hover:bg-white/5;
+    @apply transition-all duration-200 cursor-pointer;
+}
+
+.sidebar-item.active {
+    @apply text-white bg-white/10;
+}
+
+/* ========================================
+   Chat Styles
+   ======================================== */
+
+.chat-message {
+    @apply max-w-[80%] p-4 rounded-2xl;
+    animation: fade-in-up 0.3s ease-out;
+}
+
+.chat-message.user {
+    @apply ml-auto bg-indigo-500/20 border border-indigo-500/30;
+}
+
+.chat-message.assistant {
+    @apply mr-auto bg-white/5 border border-white/10;
+}
+
+/* ========================================
+   Keyboard Shortcuts
+   ======================================== */
+
+.kbd {
+    @apply inline-flex items-center justify-center px-2 py-1;
+    @apply text-xs font-medium text-white/60;
+    @apply bg-white/5 border border-white/10 rounded;
+}
+
+/* ========================================
+   Responsive Utilities
+   ======================================== */
+
+@media (max-width: 768px) {
+    .sidebar {
+        @apply fixed inset-y-0 left-0 z-50 -translate-x-full;
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar.open {
+        @apply translate-x-0;
+    }
 }

@@ -9,7 +9,7 @@ class AudioRecordingWorklet extends AudioWorkletProcessor {
 
   process(inputs, outputs, parameters) {
     const input = inputs[0];
-    if (input.length > 0) {
+    if (input && input.length > 0) {
       const samples = input[0];
       
       for (let i = 0; i < samples.length; i++) {
@@ -20,7 +20,7 @@ class AudioRecordingWorklet extends AudioWorkletProcessor {
           // Convert to Int16
           const int16Buffer = new Int16Array(this.bufferSize);
           for (let j = 0; j < this.bufferSize; j++) {
-            int16Buffer[j] = Math.max(-32768, Math.min(32767, this.buffer[j] * 32768));
+            int16Buffer[j] = Math.max(-32768, Math.min(32767, Math.floor(this.buffer[j] * 32768)));
           }
           
           this.port.postMessage({

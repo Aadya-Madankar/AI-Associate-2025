@@ -32,11 +32,36 @@ export class AudioRecorder extends EventEmitter {
       throw new Error("Could not request user media");
     }
 
+    // If already starting or recording, don't start again
+    if (this.starting) {
+      return this.starting;
+    }
+
+    if (this.recording) {
+      return Promise.resolve();
+    }
+
     this.starting = new Promise(async (resolve, reject) => {
       try {
-        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Request audio with browser-native noise suppression enabled
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
         this.audioContext = await audioContext({ sampleRate: this.sampleRate });
         this.source = this.audioContext.createMediaStreamSource(this.stream);
+
+        // Add a high-pass filter to remove low-frequency noise (rumble, AC hum)
+        const highPassFilter = this.audioContext.createBiquadFilter();
+        highPassFilter.type = "highpass";
+        highPassFilter.frequency.value = 80; // Cut frequencies below 80Hz
+        highPassFilter.Q.value = 0.7;
+
+        // Connect source through filter
+        this.source.connect(highPassFilter);
 
         const workletName = "audio-recorder-worklet";
         const src = createWorketFromSrc(workletName, AudioRecordingWorklet);
@@ -56,7 +81,8 @@ export class AudioRecorder extends EventEmitter {
           }
         };
 
-        this.source.connect(this.recordingWorklet);
+        // Connect through the high-pass filter
+        highPassFilter.connect(this.recordingWorklet);
 
         // vu meter worklet
         const vuWorkletName = "vu-meter";
@@ -69,11 +95,13 @@ export class AudioRecorder extends EventEmitter {
           this.emit("volume", ev.data.volume);
         };
 
-        this.source.connect(this.vuWorklet);
+        // Connect VU meter through the filter too
+        highPassFilter.connect(this.vuWorklet);
         this.recording = true;
         resolve();
         this.starting = null;
       } catch (error) {
+        this.starting = null;
         reject(error);
       }
     });
