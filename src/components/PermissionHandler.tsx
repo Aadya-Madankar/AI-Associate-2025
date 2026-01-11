@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, Check, X } from "lucide-react";
+import { Mic } from "lucide-react";
 
 interface PermissionStatus {
   microphone: boolean;

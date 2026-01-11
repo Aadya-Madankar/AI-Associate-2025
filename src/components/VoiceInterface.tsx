@@ -162,8 +162,8 @@ export function VoiceInterface({
   onWebcamChange,
   onScreenShareChange,
   onAssistantSpeakingChange,
-  onNewMessage,
-  videoQuality = 75
+  onNewMessage: _onNewMessage,
+  videoQuality: _videoQuality = 75
 }: VoiceInterfaceProps) {
   const { client, connected, connect, disconnect, volume } = useLiveAPIContext();
   const [audioMuted, setAudioMuted] = useState(false);

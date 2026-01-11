@@ -5,7 +5,6 @@ import {
   Mic,
   MicOff,
   Video,
-  VideoOff,
   Monitor,
   Clock,
   Activity
