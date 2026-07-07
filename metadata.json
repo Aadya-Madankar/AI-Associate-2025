@@ -1,0 +1,6 @@
+{
+  "name": "Xeno Live",
+  "description": "Conversational AI companion featuring real-time vocal and text interactions, responsive gestures, and a fluid, dynamically morphing Material 3 UI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

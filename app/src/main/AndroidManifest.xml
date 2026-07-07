@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+
+    <!--
+        Foreground-service permissions for com.example.voice.VoiceService (a
+        foregroundServiceType=microphone FGS). With targetSdk >= 34, Android 14+ throws
+        SecurityException from startForeground(... FOREGROUND_SERVICE_TYPE_MICROPHONE) unless
+        FOREGROUND_SERVICE_MICROPHONE is declared; FOREGROUND_SERVICE is required since API 28.
+        FOREGROUND_SERVICE_MICROPHONE is auto max-sdk-gated by the platform.
+        POST_NOTIFICATIONS backs the ongoing service notification's runtime grant on API 33+.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Roam: XENO floats over every app as a draggable system overlay that walks to its taps. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Vision: Nazim can SEE. Camera = the world; MediaProjection = the screen pixels.
+         Both stream throttled JPEG frames to the same Gemini Live session. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.WEB_SEARCH" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <!--
+            Package visibility (targetSdk >= 30 / Android 11+) for OpenAppTool. Without
+            this, package visibility filtering hides other apps:
+            getLaunchIntentForPackage(...) returns null and
+            queryIntentActivities(launcher, 0) returns an (almost) empty set, which
+            breaks open_app. Declaring the LAUNCHER <intent> query makes exactly the set
+            of launchable apps visible — the minimal grant OpenAppTool needs.
+            Intentionally NOT using QUERY_ALL_PACKAGES (Play policy restricted).
+        -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!--
+            Package visibility (targetSdk >= 30 / Android 11+) for DialPrefillTool.
+            tel:/ACTION_DIAL is not one of the platform's implicitly-visible intent
+            shapes (only ACTION_VIEW web intents are exempt), so without this query
+            intent.resolveActivity(packageManager) returns null even on devices that
+            have a dialer, and DialPrefillTool.execute() always fails with
+            "No dialer app available." Declaring the DIAL/tel <intent> makes the
+            dialer package visible so the resolveActivity guard behaves correctly.
+        -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        <!-- SMS / email draft tools resolve ACTION_SENDTO with smsto:/mailto:. -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MyApplication">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MyApplication">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            The phone-control engine: an AccessibilityService that reads the on-screen UI
+            tree and dispatches gestures/global actions. The user enables it explicitly in
+            system Accessibility settings (deep-linked from the app's onboarding). Ships
+            sideload, NOT via Play (autonomous a11y agents are prohibited — SCOPE.md §6).
+        -->
+        <service
+            android:name=".accessibility.AgentAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/agent_a11y_config" />
+        </service>
+
+        <!--
+            VoiceService must be declared or startForegroundService()/bindService() cannot
+            resolve it (the start silently fails and the binder returns false). The
+            foregroundServiceType="microphone" attribute is required for the type-microphone
+            FGS on API 29+ and must match FOREGROUND_SERVICE_TYPE_MICROPHONE passed to
+            startForeground().
+        -->
+        <service
+            android:name=".voice.VoiceService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!--
+            Holds the MediaProjection ("screen share") while Nazim streams screen pixels.
+            A mediaProjection-type FGS must be running before the projection is used on
+            Android 10+/14+. The token is obtained via MainActivity's system grant dialog.
+        -->
+        <service
+            android:name=".vision.ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <!-- XENO roaming overlay: the floating character drawn on top of every app. -->
+        <service
+            android:name=".overlay.XenoOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="xeno_screen_companion_overlay" />
+        </service>
+    </application>
+
+</manifest>

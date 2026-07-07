@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Accessibility-service configuration for the phone-control agent
+    (AgentAccessibilityService). See ARCHITECTURE.md §3.2.
+
+    - canRetrieveWindowContent: required to DFS the node tree for screen reading.
+    - canPerformGestures: required for dispatchGesture taps/swipes/long-press.
+    - accessibilityEventTypes=typeWindowStateChanged: the service only acts on
+      TYPE_WINDOW_STATE_CHANGED for foreground-package tracking, so subscription is
+      scoped to it. This keeps the OS from streaming TYPE_VIEW_TEXT_CHANGED/
+      TYPE_VIEW_TEXT_SELECTION_CHANGED keystroke text of editable fields (OTP/CVV/
+      card/IBAN/in-app search) into the process — data-minimization for a service
+      holding read-everything power.
+    - feedbackGeneric: no spoken/haptic feedback; this is an automation tool.
+    - flagRetrieveInteractiveWindows: see all interactive windows (overlays/dialogs).
+    - flagReportViewIds: expose getViewIdResourceName() for index grounding.
+    Note: isAccessibilityTool is intentionally NOT set (the agent is not a genuine
+    disability tool; falsely claiming it violates Play policy).
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/app_name"
+    android:notificationTimeout="100" />
