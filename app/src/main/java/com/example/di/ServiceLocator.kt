@@ -2,8 +2,6 @@ package com.example.di
 
 import android.app.Application
 import android.content.Context
-import com.example.accessibility.Accessibility
-import com.example.accessibility.AccessibilityController
 import com.example.agent.DefaultPhoneControlExecutor
 import com.example.agent.PhoneControlExecutor
 import com.example.agent.ToolDeclaration
@@ -22,8 +20,6 @@ import com.example.permission.RiskClassifier
 import com.example.permission.RuleStore
 import com.example.permission.SecureContextDetector
 import com.example.security.ScreenRedactor
-import com.example.skill.JsonFileSkillStore
-import com.example.skill.SkillStore
 
 /**
  * Manual dependency-injection container for the Xeno Live phone-control agent.
@@ -52,8 +48,7 @@ import com.example.skill.SkillStore
  * [riskClassifier] + [autonomyModeStore]), runaway-loop guards ([rateLimiter],
  * [killSwitch]), the audit sink ([auditLog]), on-device PII redaction
  * ([screenRedactor]), the tool catalog ([toolRegistry]) and the
- * [phoneControlExecutor] that drives it, plus a thin accessor over the live
- * [AccessibilityController] published out-of-band by the accessibility service.
+ * [phoneControlExecutor] that drives it.
  *
  * ### Safety wiring — read before integrating
  * These singletons are collaborators; obtaining one does **not** by itself make the
@@ -62,8 +57,8 @@ import com.example.skill.SkillStore
  *   [phoneControlExecutor]*: that executor is handed out as a redacting wrapper that
  *   runs [ScreenRedactor.redact] over every [ToolResult]'s `screen` before it can be
  *   serialized back to the model. If you read a [com.example.accessibility.ScreenState]
- *   by any **other** path (e.g. directly off [accessibilityController]) you MUST call
- *   [screenRedactor].`redact(...)` yourself before it leaves the device — the locator
+ *   by any **other** path (e.g. directly off the live `AccessibilityController`) you MUST
+ *   call [screenRedactor].`redact(...)` yourself before it leaves the device — the locator
  *   cannot intercept reads it does not own.
  * - **[permissionEngine] is NOT auto-applied.** Neither [phoneControlExecutor] nor
  *   [toolRegistry] consults it; the executor handed out here is **UNGATED**. The gate
@@ -95,7 +90,6 @@ object ServiceLocator {
     @Volatile private var _rateLimiter: RateLimiter? = null
     @Volatile private var _auditLog: AuditLog? = null
     @Volatile private var _screenRedactor: ScreenRedactor? = null
-    @Volatile private var _skillStore: SkillStore? = null
     @Volatile private var _toolRegistry: ToolRegistry? = null
     @Volatile private var _phoneControlExecutor: PhoneControlExecutor? = null
 
@@ -128,19 +122,6 @@ object ServiceLocator {
             "ServiceLocator.init(app) must be called from Application.onCreate() " +
                 "before any dependency is accessed."
         )
-
-    // --- Accessibility ------------------------------------------------------------
-
-    /**
-     * The live [AccessibilityController], or `null` until the
-     * `AgentAccessibilityService` is connected and publishes itself via
-     * [Accessibility.controller]. Callers should gate on readiness, e.g.
-     * `accessibilityController?.takeIf { it.isReady }`. This is intentionally a thin
-     * pass-through (not a cached singleton) because the controller's lifecycle is owned
-     * by the OS-managed service, not by this locator.
-     */
-    val accessibilityController: AccessibilityController?
-        get() = Accessibility.controller
 
     // --- Permission stack ---------------------------------------------------------
 
@@ -245,17 +226,6 @@ object ServiceLocator {
     // --- Agent tooling ------------------------------------------------------------
 
     /**
-     * On-device "skill memory" for Nazim: a [JsonFileSkillStore] persisting named, replayable
-     * tool-call bundles to a single JSON file in `filesDir` ([com.example.skill.JsonFileSkillStore]).
-     * No database, no cloud. Built from the application context so it outlives any Activity, and
-     * shared as one process-wide singleton so every skill tool (save/list/recall) reads and writes
-     * the same file. The store itself is internally thread-safe.
-     */
-    val skillStore: SkillStore
-        @Synchronized get() = _skillStore
-            ?: JsonFileSkillStore(requireContext()).also { _skillStore = it }
-
-    /**
      * The catalog of every [com.example.agent.AgentTool] the agent can invoke, keyed by
      * declared name. Built once from the application context (intent/hardware tools
      * capture it internally).
@@ -321,26 +291,5 @@ object ServiceLocator {
             // Completed carries no screen — nothing to redact.
             is ToolResult.Completed -> result
         }
-    }
-
-    /**
-     * Test/teardown hook: drop the captured context and every cached singleton so a
-     * fresh [init] rebuilds the graph. Not used in production; exists so instrumentation
-     * tests can isolate state between cases.
-     */
-    @Synchronized
-    fun resetForTesting() {
-        appContext = null
-        _secureContextDetector = null
-        _riskClassifier = null
-        _ruleStore = null
-        _autonomyModeStore = null
-        _permissionEngine = null
-        _rateLimiter = null
-        _auditLog = null
-        _screenRedactor = null
-        _skillStore = null
-        _toolRegistry = null
-        _phoneControlExecutor = null
     }
 }

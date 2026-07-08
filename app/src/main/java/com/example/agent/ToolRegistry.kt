@@ -53,17 +53,8 @@ class ToolRegistry(context: Context) {
     private val tools: Map<String, AgentTool> = buildTools(appContext)
         .associateBy { it.declaration.name }
 
-    /** The set of distinct registered tool names (stable across the registry's lifetime). */
-    val names: Set<String> get() = tools.keys
-
     /** Look up a tool by its declared name, or `null` if no such tool is registered. */
     fun byName(name: String): AgentTool? = tools[name]
-
-    /** True if a side-effecting tool with [name] is registered. */
-    fun has(name: String): Boolean = tools.containsKey(name)
-
-    /** Every registered tool instance (declaration order is not guaranteed). */
-    fun all(): Collection<AgentTool> = tools.values
 
     /**
      * All tool declarations to advertise in the Gemini Live setup request. Includes the

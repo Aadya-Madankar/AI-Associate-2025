@@ -1,9 +1,6 @@
 package com.example.skill
 
 import android.content.Context
-import com.example.agent.AgentTool
-import com.example.agent.ToolDeclaration
-import com.example.agent.ToolResult
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -13,9 +10,10 @@ import java.io.File
  * model has bundled together so it can replay them later. Everything lives on the phone — the
  * sole backing store is a JSON file in `filesDir` ([JsonFileSkillStore]). No database, no cloud.
  *
- * The model interacts with skills exclusively through the three [AgentTool]s below
- * (`save_skill`, `list_skills`, `recall_skill`). Recall deliberately does NOT execute anything:
- * it hands the steps back so the model re-issues them as ordinary, permission-gated tool calls.
+ * The model interacts with skills exclusively through the three `AgentTool`s in
+ * `com.example.skill.tools` (`save_skill`, `list_skills`, `recall_skill`). Recall deliberately
+ * does NOT execute anything: it hands the steps back so the model re-issues them as ordinary,
+ * permission-gated tool calls.
  */
 
 /** One step of a skill: the tool to invoke and the arguments to pass it. */
@@ -208,172 +206,4 @@ private fun jsonToValue(value: Any?): Any? = when (value) {
     is JSONObject -> jsonToMap(value)
     is JSONArray -> jsonToList(value)
     else -> value
-}
-
-// --- Tools the model uses to read/write skill memory ------------------------------------------
-
-/**
- * `save_skill` — persist a reusable bundle of tool calls. Stamps [Skill.createdAtMs] with the
- * current wall-clock time. Last-write-wins by name (see [SkillStore.save]).
- */
-class SaveSkillTool(private val store: SkillStore) : AgentTool {
-
-    override val declaration: ToolDeclaration = ToolDeclaration(
-        name = "save_skill",
-        description = "Save a named, reusable skill: an ordered list of tool calls (each with a " +
-            "tool name and its arguments) that can be recalled and replayed later. Overwrites any " +
-            "existing skill with the same name.",
-        parametersJsonSchema = """
-            {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string", "description": "Unique skill name (the lookup key)." },
-                "description": { "type": "string", "description": "What the skill does." },
-                "steps": {
-                  "type": "array",
-                  "description": "Ordered tool calls to replay.",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "tool": { "type": "string", "description": "Tool name to invoke." },
-                      "args": { "type": "object", "description": "Arguments for that tool." }
-                    },
-                    "required": ["tool"]
-                  }
-                }
-              },
-              "required": ["name", "description", "steps"]
-            }
-        """.trimIndent()
-    )
-
-    override suspend fun execute(callId: String, args: Map<String, Any?>): ToolResult {
-        val name = (args["name"] as? String)?.trim()
-        if (name.isNullOrEmpty()) {
-            return ToolResult.Failure(declaration.name, callId, "'name' is required.")
-        }
-        val description = (args["description"] as? String)?.trim().orEmpty()
-        val steps = parseSteps(args["steps"])
-        if (steps.isEmpty()) {
-            return ToolResult.Failure(
-                declaration.name, callId,
-                "'steps' must be a non-empty array of {tool, args} objects."
-            )
-        }
-
-        return runCatching {
-            store.save(
-                Skill(
-                    name = name,
-                    description = description,
-                    steps = steps,
-                    createdAtMs = System.currentTimeMillis()
-                )
-            )
-            ToolResult.Success(
-                declaration.name, callId,
-                "Saved skill '$name'.",
-                data = mapOf("name" to name, "steps" to steps.size)
-            )
-        }.getOrElse {
-            ToolResult.Failure(declaration.name, callId, "Could not save skill: ${it.message}")
-        }
-    }
-
-    /** Parse the model's `steps` payload, tolerating missing/odd-typed `args`. */
-    private fun parseSteps(raw: Any?): List<SkillStep> {
-        val list = raw as? List<*> ?: return emptyList()
-        val out = ArrayList<SkillStep>(list.size)
-        for (item in list) {
-            val map = item as? Map<*, *> ?: continue
-            val tool = (map["tool"] as? String)?.trim()
-            if (tool.isNullOrEmpty()) continue
-            val stepArgs = (map["args"] as? Map<*, *>)
-                ?.entries
-                ?.mapNotNull { (k, v) -> (k as? String)?.let { it to v } }
-                ?.toMap()
-                ?: emptyMap()
-            out.add(SkillStep(tool, stepArgs))
-        }
-        return out
-    }
-}
-
-/** `list_skills` — enumerate saved skills with their description and step count. No arguments. */
-class ListSkillsTool(private val store: SkillStore) : AgentTool {
-
-    override val declaration: ToolDeclaration = ToolDeclaration(
-        name = "list_skills",
-        description = "List all saved skills with their description and number of steps. " +
-            "Takes no arguments.",
-        parametersJsonSchema = """
-            {
-              "type": "object",
-              "properties": {}
-            }
-        """.trimIndent()
-    )
-
-    override suspend fun execute(callId: String, args: Map<String, Any?>): ToolResult {
-        return runCatching {
-            val skills = store.all().map {
-                mapOf(
-                    "name" to it.name,
-                    "description" to it.description,
-                    "steps" to it.steps.size
-                )
-            }
-            ToolResult.Success(
-                declaration.name, callId,
-                "Found ${skills.size} saved skill(s).",
-                data = mapOf("skills" to skills)
-            )
-        }.getOrElse {
-            ToolResult.Failure(declaration.name, callId, "Could not list skills: ${it.message}")
-        }
-    }
-}
-
-/**
- * `recall_skill` — fetch a saved skill's steps so the MODEL can re-issue them as normal,
- * permission-gated tool calls. This tool itself executes nothing; it only returns the recipe.
- */
-class RecallSkillTool(private val store: SkillStore) : AgentTool {
-
-    override val declaration: ToolDeclaration = ToolDeclaration(
-        name = "recall_skill",
-        description = "Recall a saved skill by name and return its ordered tool calls so you can " +
-            "re-issue them yourself as normal tool calls (each still goes through permission " +
-            "gating). This does NOT execute anything on its own.",
-        parametersJsonSchema = """
-            {
-              "type": "object",
-              "properties": {
-                "name": { "type": "string", "description": "Name of the skill to recall." }
-              },
-              "required": ["name"]
-            }
-        """.trimIndent()
-    )
-
-    override suspend fun execute(callId: String, args: Map<String, Any?>): ToolResult {
-        val name = (args["name"] as? String)?.trim()
-        if (name.isNullOrEmpty()) {
-            return ToolResult.Failure(declaration.name, callId, "'name' is required.")
-        }
-
-        val skill = runCatching { store.get(name) }.getOrNull()
-            ?: return ToolResult.Failure(declaration.name, callId, "No skill named '$name'.")
-
-        val steps = skill.steps.map { mapOf("tool" to it.tool, "args" to it.args) }
-        return ToolResult.Success(
-            declaration.name, callId,
-            "Recalled skill '${skill.name}' (${steps.size} step(s)). Re-issue these as tool calls.",
-            data = mapOf(
-                "name" to skill.name,
-                "description" to skill.description,
-                "steps" to steps
-            )
-        )
-    }
 }

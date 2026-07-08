@@ -27,6 +27,9 @@ class GeminiToolMapperTest {
 
     private val mapper = GeminiToolMapper()
 
+    /** Minimal valid object schema for fixtures where the schema's content is irrelevant. */
+    private val EMPTY_OBJECT_SCHEMA = """{"type":"object","properties":{}}"""
+
     // ------------------------------------------------------------------------
     // Unknown tool → UNKNOWN type, NON-reversible (fail-closed)
     // ------------------------------------------------------------------------
@@ -197,12 +200,12 @@ class GeminiToolMapperTest {
             ToolDeclaration(
                 name = AgentToolSchemas.GET_SCREEN,
                 description = "Read the screen",
-                parametersJsonSchema = AgentToolSchemas.EMPTY
+                parametersJsonSchema = EMPTY_OBJECT_SCHEMA
             ),
             ToolDeclaration(
                 name = AgentToolSchemas.OPEN_APP,
                 description = "Open an app",
-                parametersJsonSchema = AgentToolSchemas.OPEN_APP_SCHEMA
+                parametersJsonSchema = EMPTY_OBJECT_SCHEMA
             )
         )
 
@@ -223,7 +226,7 @@ class GeminiToolMapperTest {
         val decl = ToolDeclaration(
             name = AgentToolSchemas.OPEN_URL,
             description = "Open a URL",
-            parametersJsonSchema = AgentToolSchemas.OPEN_URL_SCHEMA
+            parametersJsonSchema = EMPTY_OBJECT_SCHEMA
         )
 
         val live = mapper.toLiveFunctionDeclaration(decl)
