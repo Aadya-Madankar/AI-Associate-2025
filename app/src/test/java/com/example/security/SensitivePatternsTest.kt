@@ -219,6 +219,87 @@ class SensitivePatternsTest {
         }
     }
 
+    // ---------------------------------------------------------------------
+    // Union coverage: every literal example matched by the OLD, now-deleted
+    // DenyLists.sensitiveFieldRegex / sensitiveValueRegex must still match the
+    // unified SensitivePatterns library (Task 7: "SensitivePatterns becomes the
+    // ONLY secret-shape library"). Several of these — "mfa code", "card #", and
+    // every underscore-separated Android resource-id style string — are NEW
+    // coverage: the old \b-based labelPatterns regexes do not match across an
+    // underscore (`_` is a regex word char, so `\botp\b` never matches
+    // `otp_input`), which is exactly the gap DenyLists.sensitiveFieldRegex's own
+    // doc comment used non-alnum lookarounds to close. ScreenReader/
+    // NodeActionExecutor/InputTextTool now feed raw viewIdResourceName strings
+    // (e.g. "otp_input") straight into SensitivePatterns, so this is a real,
+    // not hypothetical, gap.
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun unionOfDenyListsFieldExamples_matchSensitiveLabel() {
+        val examples = listOf(
+            "OTP",
+            "CVV",
+            "CVC",
+            "PIN",
+            "password",
+            "passcode",
+            "card number",
+            "card no",
+            "card num",
+            "card #",
+            "routing number",
+            "account number",
+            "IBAN",
+            "security code",
+            "verification code",
+            "2fa code",
+            "mfa code",
+            "auth code",
+            "authentication code",
+            "one-time code",
+            "one time password",
+            "onetime pin",
+            "SSN",
+            "social security",
+            // Android resource-id style (underscore-separated) — DenyLists' whole
+            // rationale for non-\b boundaries.
+            "otp_input",
+            "cvv_field",
+            "card_number_field",
+            "otp_digit_1",
+            "pin_code_field",
+            "social_security_number"
+        )
+        for (example in examples) {
+            assertTrue(
+                "'$example' (a DenyLists.sensitiveFieldRegex example) must match the " +
+                    "unified SensitivePatterns label set",
+                SensitivePatterns.matchesSensitiveLabel(example)
+            )
+        }
+    }
+
+    @Test
+    fun unionOfDenyListsValueExamples_matchSensitiveValue() {
+        val examples = listOf(
+            "123456",                     // 4-8 digit OTP-shaped run
+            "1234",
+            "123456789",                  // bare 9-digit run (SSN-shaped)
+            "4111111111111111",           // 16-digit PAN, unspaced
+            "4111 1111 1111 1111",
+            "4111-1111-1111-1111",
+            "DE89370400440532013000",     // compact IBAN
+            "GB29NWBK60161331926819"      // compact IBAN, no spaces
+        )
+        for (example in examples) {
+            assertTrue(
+                "'$example' (a DenyLists.sensitiveValueRegex example) must match the " +
+                    "unified SensitivePatterns value set",
+                SensitivePatterns.matchesSensitiveValue(includeShortDigits = true, example)
+            )
+        }
+    }
+
     @Test
     fun wordBoundaryAvoidsLabelFalsePositives() {
         // Per the source contract: "spin" must never match PIN, "scarred" never card.

@@ -145,21 +145,11 @@ class DataStoreRuleStore(
 
         /**
          * Action types for which a *standing* grant (SESSION / ALWAYS_THIS_ACTION_AND_APP)
-         * is never written: irreversible/forced-ask and
-         * BLOCKED-tier types. Mirrors the engine's forced-ask list plus the BLOCKED tier
-         * (DELETE_DATA, CHANGE_SECURITY_SETTING) so the store itself can never hold a
-         * grant that, if honored, would auto-send/auto-delete/auto-purchase.
+         * is never written. The single canonical [PermissionModel.FORCED_ASK_TYPES] set
+         * so the store itself can never hold a grant that, if honored, would
+         * auto-send/auto-delete/auto-purchase.
          */
-        val NEVER_STANDING_TYPES: Set<ActionType> = setOf(
-            ActionType.SEND_MESSAGE,
-            ActionType.SEND_EMAIL,
-            ActionType.PLACE_CALL,
-            ActionType.MAKE_PURCHASE,
-            ActionType.DELETE_DATA,
-            ActionType.INSTALL_APP,
-            ActionType.UNINSTALL_APP,
-            ActionType.CHANGE_SECURITY_SETTING
-        )
+        val NEVER_STANDING_TYPES: Set<ActionType> = PermissionModel.FORCED_ASK_TYPES
 
         /** Canonical key for one action type aimed at one app (or no-app). */
         fun ruleKey(type: ActionType, app: String?): String =

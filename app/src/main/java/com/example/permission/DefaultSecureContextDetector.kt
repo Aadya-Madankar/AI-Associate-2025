@@ -35,8 +35,9 @@ import com.example.security.SensitivePatterns
  * bare [ScreenState] contract carries no explicit keyguard flag; the accessibility
  * service supplies that out of band when it has it.
  *
- * Pure and stateless. The package/regex sources live in [DenyLists] and are
- * user-editable at runtime.
+ * Pure and stateless. The denylisted-package source lives in [DenyLists] (user-editable
+ * at runtime); the OTP/CVV/PIN/card/IBAN "what looks like a secret" patterns live solely
+ * in [SensitivePatterns].
  */
 class DefaultSecureContextDetector : SecureContextDetector {
 
@@ -122,7 +123,7 @@ class DefaultSecureContextDetector : SecureContextDetector {
         // 'com shop id otp input' and 'card_number_field' into 'card number field'. This
         // makes the structural-signal path robust even though the raw id is also passed.
         val normalizedResourceId = normalizeResourceId(el.resourceId)
-        val labelMatch = DenyLists.matchesSensitiveField(
+        val labelMatch = SensitivePatterns.matchesSensitiveLabel(
             el.text,
             el.hint,
             el.contentDescription,
@@ -136,7 +137,7 @@ class DefaultSecureContextDetector : SecureContextDetector {
 
         // A resource-id match is an unambiguous structural signal (e.g. .../otp_input), so
         // it counts even when the element is non-editable.
-        if (DenyLists.matchesSensitiveField(el.resourceId, normalizedResourceId)) return true
+        if (SensitivePatterns.matchesSensitiveLabel(el.resourceId, normalizedResourceId)) return true
 
         // Non-editable but explicitly labeled (e.g. an "Enter OTP" prompt next to a field).
         if (labelMatch) return true
@@ -144,9 +145,7 @@ class DefaultSecureContextDetector : SecureContextDetector {
         // Backstop: a displayed value that looks like a one-time code, card number or IBAN
         // — flagged whether the field is editable or not, since ScreenSerializer emits
         // el.text verbatim and a displayed OTP/PAN must not leave the device unredacted.
-        if (!el.text.isNullOrBlank() &&
-            DenyLists.sensitiveValueRegex.containsMatchIn(el.text!!)
-        ) {
+        if (SensitivePatterns.matchesSensitiveValue(includeShortDigits = true, el.text)) {
             return true
         }
         return false

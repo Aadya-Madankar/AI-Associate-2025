@@ -6,9 +6,9 @@ import com.example.agent.AgentTool
 import com.example.agent.ToolDeclaration
 import com.example.agent.ToolResult
 import com.example.permission.DefaultSecureContextDetector
-import com.example.permission.DenyLists
 import com.example.permission.SecureReason
 import com.example.security.ScreenRedactor
+import com.example.security.SensitivePatterns
 
 /**
  * `input_text` — types `text` into the editable element at `index`.
@@ -151,7 +151,7 @@ class InputTextTool : AgentTool {
 private fun isSecretShaped(el: UiElement): Boolean {
     if (el.password) return true
     if (!el.editable) return false
-    return DenyLists.matchesSensitiveField(
+    return SensitivePatterns.matchesSensitiveLabel(
         el.text,
         el.hint,
         el.contentDescription,

@@ -5,6 +5,7 @@ import com.example.live.LiveFunctionDeclaration
 import com.example.live.LiveTool
 import com.example.permission.ActionType
 import com.example.permission.AgentAction
+import com.example.permission.PermissionModel
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 
@@ -179,8 +180,10 @@ class GeminiToolMapper(moshi: Moshi = defaultMoshi()) {
         /**
          * Action types whose effects cannot be undone. These are marked
          * [AgentAction.reversible] = false and therefore NEVER qualify for AUTO
-         * (ARCHITECTURE.md §4.2). Listed exhaustively so new GUARDED tool names are
-         * irreversible-by-default the moment they map to one of these types.
+         * (ARCHITECTURE.md §4.2). The single canonical [PermissionModel.FORCED_ASK_TYPES]
+         * set — kept as a local `val` (rather than referenced inline everywhere) so a
+         * future tool-specific addition can union onto it here without forking the
+         * canonical definition.
          *
          * This set is NOT the only backstop: [ActionType.UNKNOWN] is treated as
          * irreversible by [toAgentAction] independently of this set. That is the
@@ -190,15 +193,6 @@ class GeminiToolMapper(moshi: Moshi = defaultMoshi()) {
          * [NAME_TO_TYPE] (mapping it to one of the types below) is what upgrades it
          * from "unknown, ask always" to "known irreversible, ask per policy".
          */
-        private val IRREVERSIBLE_TYPES: Set<ActionType> = setOf(
-            ActionType.PLACE_CALL,
-            ActionType.SEND_MESSAGE,
-            ActionType.SEND_EMAIL,
-            ActionType.MAKE_PURCHASE,
-            ActionType.DELETE_DATA,
-            ActionType.UNINSTALL_APP,
-            ActionType.INSTALL_APP,
-            ActionType.CHANGE_SECURITY_SETTING
-        )
+        private val IRREVERSIBLE_TYPES: Set<ActionType> = PermissionModel.FORCED_ASK_TYPES
     }
 }

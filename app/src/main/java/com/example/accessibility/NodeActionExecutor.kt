@@ -4,7 +4,7 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.view.accessibility.AccessibilityNodeInfo
-import com.example.permission.DenyLists
+import com.example.security.SensitivePatterns
 
 /**
  * Performs an index-targeted UI action (click / set-text / scroll / long-press)
@@ -100,7 +100,7 @@ class NodeActionExecutor(
         }
         if (node.isPassword ||
             node.hasPasswordInputType() ||
-            DenyLists.matchesSensitiveField(
+            SensitivePatterns.matchesSensitiveLabel(
                 node.viewIdResourceName,
                 hint,
                 node.contentDescription?.toString(),

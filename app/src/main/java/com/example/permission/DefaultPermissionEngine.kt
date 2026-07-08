@@ -1,6 +1,8 @@
 package com.example.permission
 
 import com.example.accessibility.ScreenState
+import com.example.accessibility.UiElement
+import com.example.security.SensitivePatterns
 
 /**
  * Default [PermissionEngine] implementing the Claude-Code-style four-layer, first-match
@@ -33,18 +35,10 @@ class DefaultPermissionEngine(
 
     /**
      * Action types that ALWAYS require explicit confirmation, regardless of mode or any
-     * standing "always allow" rule. These are the irreversible/outbound primitives from
-     * §4.2's forced-ask list; reversibility dominates, so they never auto-run.
+     * standing "always allow" rule. The single canonical [PermissionModel.FORCED_ASK_TYPES]
+     * set; reversibility dominates, so they never auto-run.
      */
-    private val forcedAskTypes: Set<ActionType> = setOf(
-        ActionType.SEND_MESSAGE,
-        ActionType.SEND_EMAIL,
-        ActionType.PLACE_CALL,
-        ActionType.MAKE_PURCHASE,
-        ActionType.DELETE_DATA,
-        ActionType.UNINSTALL_APP,
-        ActionType.INSTALL_APP
-    )
+    private val forcedAskTypes: Set<ActionType> = PermissionModel.FORCED_ASK_TYPES
 
     override fun decide(
         action: AgentAction,
@@ -75,14 +69,7 @@ class DefaultPermissionEngine(
             )
         }
 
-        // For a TAP/LONG_PRESS, resolve the tapped element's label from the screen so the
-        // classifier can escalate a click on a "Send"/"Pay"/"Delete"/"Confirm" control (a UI
-        // commit of an irreversible/outbound flow the ActionType alone can't see). The TAP
-        // params carry only {index}, so the label is resolved here, where the screen is
-        // available; an UNRESOLVED label makes the classifier fail closed to GUARDED so the
-        // effective tier reflects the same commit guard enforced explicitly in Layer 2b below.
-        val tapTargetLabel = resolveTapTargetLabel(action, screen)
-        val effectiveTier = classifier.classify(action, secureReason, tapTargetLabel)
+        val effectiveTier = classifier.classify(action, secureReason)
 
         // ---- Layer 2: forced-ask list → always Confirm (even in BYPASS) ----
         if (action.type in forcedAskTypes || !action.reversible) {
@@ -103,11 +90,20 @@ class DefaultPermissionEngine(
         // on a "Send"/"Pay"/"Transfer"/"Confirm"/"Delete" control is an irreversible UI
         // commit that statically classifies SAFE and would otherwise auto-run in
         // AUTO/ASK_LESS (ARCHITECTURE.md §5/§8: such taps must always confirm, never
-        // AUTO). Resolve the target element from the passed screen by its index param and,
-        // if its label looks like a commit control, force an explicit ONCE confirm — it
-        // can never auto-run and can never receive a standing/ALWAYS grant. Fail closed.
+        // AUTO). This is the SINGLE commit-tap enforcement point (a former second copy —
+        // keyed on a different word list — lived in RiskClassifier's tap-label
+        // escalation, which let a tap slip through if it matched only one list's words).
+        // Resolve the target element from the passed screen by its index param and, if its
+        // label looks like a commit control, force an explicit confirm — it can never
+        // auto-run and can never receive a standing/ALWAYS grant. An element that cannot
+        // be resolved at all (missing/unparseable index, or no matching element on the
+        // passed screen) is treated the same as a commit match: we refuse to assume an
+        // unidentifiable tap is harmless. Fail closed.
         if (action.type == ActionType.TAP || action.type == ActionType.LONG_PRESS) {
-            if (isCommitTap(action, screen)) {
+            val target = resolveTapTarget(action, screen)
+            val isCommit = target == null ||
+                DenyLists.matchesCommitButton(target.text, target.contentDescription)
+            if (isCommit) {
                 if (isHardSecureBlock(secureReason, screen) && mode != AutonomyMode.BYPASS) {
                     return blockForSecureReason(secureReason)
                 }
@@ -116,7 +112,7 @@ class DefaultPermissionEngine(
                 // mode (including AUTO/ASK_LESS/BYPASS) so the UI-level commit never runs
                 // silently and never becomes an ALWAYS rule.
                 return PermissionDecision.Confirm(
-                    buildConfirmRequest(action, maxTier(effectiveTier, RiskTier.GUARDED), secureReason)
+                    buildConfirmRequest(action, classifier.maxTier(effectiveTier, RiskTier.GUARDED), secureReason)
                 )
             }
         }
@@ -215,8 +211,9 @@ class DefaultPermissionEngine(
      * displayed or logged (per AgentAction/ScreenState's no-leak guarantee). Param
      * values are masked when the secure context is non-trivial or when the key/value
      * itself looks like an OTP / card / PIN / password, via
-     * [DenyLists.sensitiveFieldRegex] / [DenyLists.sensitiveValueRegex]. The literal
-     * `text` of an INPUT_TEXT into a password/OTP field is never surfaced at all.
+     * [SensitivePatterns.matchesSensitiveLabel] / [SensitivePatterns.matchesSensitiveValue]
+     * — the same unified library the detector and redactor consume. The literal `text`
+     * of an INPUT_TEXT into a password/OTP field is never surfaced at all.
      */
     private fun literalDetails(
         action: AgentAction,
@@ -243,10 +240,11 @@ class DefaultPermissionEngine(
      * Returns the display string for a single param value, redacting anything sensitive
      * before it leaves the device. A value is masked when:
      *  - the surrounding context is a secure field (password / OTP / card), OR
-     *  - the param key matches [DenyLists.sensitiveFieldRegex] (e.g. "otp", "cvv",
-     *    "password"), OR
-     *  - the value itself matches [DenyLists.sensitiveValueRegex] (e.g. a 6-digit code,
-     *    a PAN, an IBAN), in which case only the matched spans are bulleted.
+     *  - the param key matches [SensitivePatterns.matchesSensitiveLabel] (e.g. "otp",
+     *    "cvv", "password"), OR
+     *  - the value itself matches one of [SensitivePatterns.alwaysValuePatterns] /
+     *    [SensitivePatterns.shortDigitPatterns] (e.g. a 6-digit code, a PAN, an IBAN),
+     *    in which case only the matched spans are bulleted.
      *
      * The literal `text` of an INPUT_TEXT into a password/OTP field is never surfaced.
      */
@@ -270,15 +268,19 @@ class DefaultPermissionEngine(
 
         // A sensitive secure context, or a sensitive-looking key, masks the value whole.
         if (secureReason != SecureReason.NONE ||
-            DenyLists.sensitiveFieldRegex.containsMatchIn(key)
+            SensitivePatterns.matchesSensitiveLabel(key)
         ) {
             return redactedPlaceholder
         }
 
         // Otherwise mask only the spans of the value that look like a secret.
-        return DenyLists.sensitiveValueRegex.replace(raw) { match ->
-            "•".repeat(match.value.count { !it.isWhitespace() })
+        var result = raw
+        for (pattern in SensitivePatterns.alwaysValuePatterns + SensitivePatterns.shortDigitPatterns) {
+            result = pattern.replace(result) { match ->
+                "•".repeat(match.value.count { !it.isWhitespace() })
+            }
         }
+        return result
     }
 
     /**
@@ -300,46 +302,19 @@ class DefaultPermissionEngine(
     }
 
     /**
-     * True if a raw TAP/LONG_PRESS is committing an irreversible/outbound UI action,
-     * i.e. it targets an element whose visible label (text / content-description) matches
-     * [DenyLists.commitButtonRegex] ("Send"/"Pay"/"Transfer"/"Confirm"/"Delete"…). The
-     * target is resolved from [screen] by the action's `index` param. Fails closed: if
-     * the index is missing/unparseable or the element can't be found, this returns false
-     * (the call is still subject to every other layer), but when an index DOES resolve to
-     * a commit-labelled element the tap is forced to confirm regardless of mode.
+     * Resolves the element a TAP/LONG_PRESS [action] targets, by its `index` param, from
+     * [screen]. Returns `null` when the index is missing/unparseable or no element with
+     * that index exists on [screen] — the sole index-resolution helper for Layer 2b:
+     * both the commit-button check and the "unresolved tap fails closed" rule consume
+     * this one function instead of each re-deriving the index/element independently.
      */
-    private fun isCommitTap(action: AgentAction, screen: ScreenState?): Boolean {
-        val elements = screen?.elements ?: return false
-        val idx = (action.params["index"] as? Number)?.toInt()
-            ?: (action.params["index"] as? String)?.trim()?.toIntOrNull()
-            ?: return false
-        val target = elements.firstOrNull { it.index == idx } ?: return false
-        return DenyLists.matchesCommitButton(target.text, target.contentDescription)
-    }
-
-    /**
-     * Resolves the visible label (text, else content-description) of the element a
-     * TAP/LONG_PRESS targets, so [RiskClassifier.classify] can inspect it for a commit-button
-     * keyword. Returns `null` for non-tap actions (the classifier ignores the label for them)
-     * and — deliberately — also `null` when the tap's `index` is missing/unparseable or the
-     * element cannot be found in [screen]. For a TAP/LONG_PRESS a `null` label is a fail-closed
-     * signal: the classifier floors such an unresolved tap to GUARDED rather than SAFE, so a tap
-     * we cannot identify can never auto-run in AUTO/ASK_LESS.
-     */
-    private fun resolveTapTargetLabel(action: AgentAction, screen: ScreenState?): String? {
-        if (action.type != ActionType.TAP && action.type != ActionType.LONG_PRESS) return null
+    private fun resolveTapTarget(action: AgentAction, screen: ScreenState?): UiElement? {
         val elements = screen?.elements ?: return null
         val idx = (action.params["index"] as? Number)?.toInt()
             ?: (action.params["index"] as? String)?.trim()?.toIntOrNull()
             ?: return null
-        val target = elements.firstOrNull { it.index == idx } ?: return null
-        return target.text?.takeUnless { it.isBlank() }
-            ?: target.contentDescription?.takeUnless { it.isBlank() }
+        return elements.firstOrNull { it.index == idx }
     }
-
-    /** Ordinal-based MAX over the [RiskTier] lattice SAFE < GUARDED < BLOCKED. */
-    private fun maxTier(a: RiskTier, b: RiskTier): RiskTier =
-        if (a.ordinal >= b.ordinal) a else b
 
     private fun isHardSecureBlock(reason: SecureReason, screen: ScreenState?): Boolean = when (reason) {
         SecureReason.DENYLISTED_APP,

@@ -1,11 +1,12 @@
 package com.example.permission
 
 /**
- * Curated, user-editable denylists and sensitive-keyword patterns that gate the
- * permission engine. These are the hard ethical boundaries from ARCHITECTURE.md §4.3
- * and §8: banking / wallet / authenticator apps are never automated, and any field
- * whose text/hint/resource-id looks like an OTP, CVV, PIN, password, card number, or
- * IBAN is treated as a secure context.
+ * Curated, user-editable denylists that gate the permission engine: banking / wallet /
+ * authenticator apps and the categorically-refused action types from ARCHITECTURE.md
+ * §4.3 and §8. "What looks like a secret" (OTP / CVV / PIN / password / card / IBAN
+ * field or value) is NOT here — that lives solely in
+ * [com.example.security.SensitivePatterns], the single secret-shape library consumed
+ * by [DefaultSecureContextDetector], the accessibility layer, and the redactor alike.
  *
  * Nothing here performs detection itself — [DefaultSecureContextDetector] and
  * [DefaultPermissionEngine] consume these sets. They are exposed as mutable, snapshot
@@ -108,44 +109,21 @@ object DenyLists {
         )
 
     /**
-     * Sensitive-keyword regex applied to a field's text, hint, content-description and
-     * resource-id. A match marks the surrounding context as [SecureReason.OTP_OR_CARD_FIELD].
-     *
-     * Boundaries use a *non-alphanumeric* lookaround [(?<![A-Za-z0-9]) ... (?![A-Za-z0-9])]
-     * rather than `\b`, because `_`, `/` and `-` are the structural separators in real
-     * Android resource ids (e.g. `com.shop:id/otp_input`, `cvv_field`, `card_number_field`,
-     * `otp_digit_1`). In regex `_` is a word char, so `\bOTP\b` does NOT match `otp_input`
-     * — the lookarounds treat `_`/`/`/`-` as separators so those structural ids are caught,
-     * while "spinner", "scarred", "cardiac", "account_balance" and "opinion" still don't
-     * match. Multi-word tokens allow `[\s_-]` between parts. Order is irrelevant — any match
-     * wins.
-     */
-    val sensitiveFieldRegex: Regex = Regex(
-        """(?i)((?<![A-Za-z0-9])OTP(?![A-Za-z0-9])|(?<![A-Za-z0-9])CVV(?![A-Za-z0-9])|(?<![A-Za-z0-9])CVC(?![A-Za-z0-9])|(?<![A-Za-z0-9])PIN(?![A-Za-z0-9])|password|passcode|(?<![A-Za-z0-9])card[\s_-]*number(?![A-Za-z0-9])|(?<![A-Za-z0-9])card[\s_-]*((?<![A-Za-z0-9])(no|num)(?![A-Za-z0-9])|#)|(?<![A-Za-z0-9])(routing|account)[\s_-]*number(?![A-Za-z0-9])|(?<![A-Za-z0-9])IBAN(?![A-Za-z0-9])|security[\s_-]*code|(?<![A-Za-z0-9])verification[\s_-]*code(?![A-Za-z0-9])|(?<![A-Za-z0-9])(2fa|mfa|auth(?:entication)?)[\s_-]*code(?![A-Za-z0-9])|one[-\s_]?time[\s_-]*(code|password|pin)|(?<![A-Za-z0-9])SSN(?![A-Za-z0-9])|social[\s_-]*security)"""
-    )
-
-    /**
-     * Tighter pattern for *values* that look like an OTP / card number / IBAN even
-     * without a label — e.g. a 6-digit code or a 13–19 digit PAN. Used as a backstop
-     * when a field has no descriptive label. Kept separate so callers can choose how
-     * aggressively to redact.
-     */
-    val sensitiveValueRegex: Regex = Regex(
-        """(?i)((?<!\d)\d{4,8}(?!\d))|(\b\d{9}\b)|(\b(?:\d[ -]?){13,19}\b)|(\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b)"""
-    )
-
-    /**
      * Labels of UI controls that commit an irreversible/outbound action when tapped —
-     * "Send", "Pay", "Transfer", "Confirm", "Delete"… Per ARCHITECTURE.md §5/§8 these
-     * must ALWAYS confirm and NEVER auto-run, even in AUTO/ASK_LESS. The agent drives
-     * apps by tapping their own buttons (not high-level send_* tools), so a raw TAP on a
-     * button whose text/content-description matches this pattern is treated as a
-     * forced-ask commit by [DefaultPermissionEngine]. Word-boundary anchored so "resend"
-     * does not match "send" inside another word is NOT a concern here — we deliberately
-     * fail closed and confirm on any whole-word match.
+     * "Send", "Pay", "Transfer", "Confirm", "Delete", "Authorize"… Per ARCHITECTURE.md
+     * §5/§8 these must ALWAYS confirm and NEVER auto-run, even in AUTO/ASK_LESS/BYPASS.
+     * The agent drives apps by tapping their own buttons (not high-level send_* tools),
+     * so a raw TAP on a button whose text/content-description matches this pattern is
+     * treated as a forced-ask commit by [DefaultPermissionEngine] Layer 2b — the single
+     * commit-tap enforcement point (a former second copy of this list, keyed on
+     * different words, lived in `RiskClassifier.dangerousTapLabel` and has been merged
+     * in here so a tap can no longer slip past one list by matching only the other).
+     * Word-boundary anchored so "resend" does not match "send" inside another word is
+     * NOT a concern here — we deliberately fail closed and confirm on any whole-word
+     * match.
      */
     val commitButtonRegex: Regex = Regex(
-        """(?i)\b(send|pay|transfer|confirm|place\s*order|buy|checkout|check\s*out|delete|remove|purchase|wire|withdraw|book|submit)\b"""
+        """(?i)\b(send|pay|transfer|confirm|place\s*order|place\s*call|call\s*now|buy|checkout|check\s*out|delete|remove|purchase|wire|withdraw|book|submit|authori[sz]e)\b"""
     )
 
     /**
@@ -181,11 +159,4 @@ object DenyLists {
     /** Returns true if [type] is categorically refused regardless of context. */
     fun isDenylistedActionType(type: ActionType): Boolean =
         denylistedActionTypes.contains(type)
-
-    /**
-     * Returns true if any of the provided field signals (text/hint/desc/resource-id)
-     * matches the sensitive-keyword pattern. Convenience for the detector.
-     */
-    fun matchesSensitiveField(vararg signals: String?): Boolean =
-        signals.any { !it.isNullOrBlank() && sensitiveFieldRegex.containsMatchIn(it) }
 }

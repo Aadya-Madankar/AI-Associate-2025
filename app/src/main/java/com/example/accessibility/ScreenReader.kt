@@ -4,7 +4,7 @@ import android.graphics.Rect
 import android.os.Build
 import android.text.InputType
 import android.view.accessibility.AccessibilityNodeInfo
-import com.example.permission.DenyLists
+import com.example.security.SensitivePatterns
 
 /**
  * Reads the live accessibility tree into the model-facing [ScreenState].
@@ -132,8 +132,8 @@ class ScreenReader(
 
     /**
      * True if the last [read] saw a node whose hint / content-description /
-     * resource-id matched [DenyLists.matchesSensitiveField] (OTP / CVV / PIN / card /
-     * IBAN …) anywhere in the tree, regardless of the inclusion filter or element cap.
+     * resource-id matched [SensitivePatterns.matchesSensitiveLabel] (OTP / CVV / PIN /
+     * card / IBAN …) anywhere in the tree, regardless of the inclusion filter or element cap.
      * Lets the service raise [com.example.permission.SecureReason.OTP_OR_CARD_FIELD]
      * for a sensitive field that was trimmed out of the element list.
      */
@@ -211,7 +211,7 @@ class ScreenReader(
                     } else {
                         null
                     }
-                sawSensitiveLabel = DenyLists.matchesSensitiveField(
+                sawSensitiveLabel = SensitivePatterns.matchesSensitiveLabel(
                     hint,
                     node.contentDescription?.toString(),
                     node.viewIdResourceName

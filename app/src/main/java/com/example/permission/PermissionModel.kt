@@ -82,6 +82,34 @@ enum class ActionType {
 }
 
 /**
+ * Cross-cutting permission constants that must have exactly one definition. Kept
+ * addressable (`PermissionModel.FORCED_ASK_TYPES`) so it can be shared by
+ * [DefaultPermissionEngine], [RiskClassifier], [DataStoreRuleStore], and
+ * [com.example.agent.GeminiToolMapper] — the four places that used to hand-maintain
+ * their own copy of "which action types are irreversible/forced-ask" and had already
+ * drifted out of lock-step (the engine's copy was missing CHANGE_SECURITY_SETTING).
+ */
+object PermissionModel {
+    /**
+     * Action types that ALWAYS require explicit confirmation and can never receive a
+     * standing "always allow" grant, regardless of autonomy mode — the forced-ask /
+     * irreversible list from ARCHITECTURE.md §4.2. Consuming sites reference this set
+     * directly; [com.example.agent.GeminiToolMapper] may union in additional
+     * locally-relevant types but must not redefine/fork it.
+     */
+    val FORCED_ASK_TYPES: Set<ActionType> = setOf(
+        ActionType.SEND_MESSAGE,
+        ActionType.SEND_EMAIL,
+        ActionType.PLACE_CALL,
+        ActionType.MAKE_PURCHASE,
+        ActionType.DELETE_DATA,
+        ActionType.UNINSTALL_APP,
+        ActionType.INSTALL_APP,
+        ActionType.CHANGE_SECURITY_SETTING
+    )
+}
+
+/**
  * A concrete action the agent wants to perform, resolved from a Gemini tool call.
  *
  * @param type           which [ActionType] this is.

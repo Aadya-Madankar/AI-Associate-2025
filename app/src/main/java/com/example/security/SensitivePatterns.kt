@@ -20,12 +20,29 @@ package com.example.security
  *    secret regardless of any label — a 13–19 digit PAN, an IBAN, a short OTP-looking
  *    digit run, a CVV, an email (optional/lenient), or a long opaque token.
  *
- * All matching is case-insensitive and word-boundary anchored where a naive substring
- * match would cause false positives (so "spin" never matches "PIN", "scarred" never
- * matches "card"). Patterns are precompiled once and reused; callers must not mutate
- * them.
+ * All matching is case-insensitive and boundary-anchored where a naive substring match
+ * would cause false positives (so "spin" never matches "PIN", "scarred" never matches
+ * "card"). The boundary is a non-alphanumeric lookaround — `(?<![A-Za-z0-9])` /
+ * `(?![A-Za-z0-9])` — rather than `\b`, because `_` is a regex word character but is
+ * also the structural separator in real Android resource ids (e.g. `otp_input`,
+ * `cvv_field`, `card_number_field`): `\botp\b` never matches inside `otp_input` since
+ * there is no word-boundary transition either side of `_`. [com.example.accessibility.ScreenReader]
+ * and [com.example.accessibility.NodeActionExecutor] feed raw `viewIdResourceName` strings
+ * straight into [matchesSensitiveLabel], so this is load-bearing, not cosmetic. Patterns
+ * are precompiled once and reused; callers must not mutate them.
  */
 object SensitivePatterns {
+
+    /** Not preceded by a letter/digit — used instead of `\b` so `_`/other separators
+     * adjacent to a token don't defeat the match (see class doc). */
+    private const val NB = "(?<![A-Za-z0-9])"
+
+    /** Not followed by a letter/digit. */
+    private const val NA = "(?![A-Za-z0-9])"
+
+    /** Optional run of the separators seen in prose ("one time") and resource ids
+     * ("one_time"/"one-time"). */
+    private const val SEP = "[-\\s_]?"
 
     /**
      * The redaction token substituted in place of any sensitive run. Chosen to be
@@ -40,37 +57,41 @@ object SensitivePatterns {
 
     /** One-time-password / one-time-code labels. */
     val OTP_LABEL: Regex = Regex(
-        """(?i)\b(otp|one[-\s]?time[-\s]?(code|password|pin|passcode)|verification[-\s]?code|auth(?:entication)?[-\s]?code|2fa)\b"""
+        "(?i)$NB(otp|one${SEP}time$SEP(code|password|pin|passcode)|verification${SEP}code|" +
+            "auth(?:entication)?${SEP}code|2fa|mfa)$NA"
     )
 
     /** Card-security-code labels (CVV / CVC / CVC2 / CID / security code). */
     val CVV_LABEL: Regex = Regex(
-        """(?i)\b(cvv|cvc|cvc2|cvv2|cid|card[-\s]?security[-\s]?code|security[-\s]?code)\b"""
+        "(?i)$NB(cvv|cvc|cvc2|cvv2|cid|card${SEP}security${SEP}code|security${SEP}code)$NA"
     )
 
-    /** Card / PAN labels. */
+    /** Card / PAN labels (including a bare "card #" / "card#" suffix). */
     val CARD_LABEL: Regex = Regex(
-        """(?i)\b(card[-\s]?(number|no|num|pan)|credit[-\s]?card|debit[-\s]?card|pan)\b"""
+        "(?i)$NB(card${SEP}(number|no|num|pan)|credit${SEP}card|debit${SEP}card|pan)$NA" +
+            "|(?i)${NB}card[-\\s_]*#"
     )
 
-    /** PIN labels (word-boundary anchored so "spinner" does not match). */
+    /** PIN labels (boundary-anchored so "spinner" does not match, "pin_code" does). */
     val PIN_LABEL: Regex = Regex(
-        """(?i)\b(pin|passcode)\b"""
+        "(?i)$NB(pin|passcode)$NA"
     )
 
     /** Password / secret / credential labels. */
     val PASSWORD_LABEL: Regex = Regex(
-        """(?i)\b(password|passwd|pwd|secret|credential|api[-\s]?key|token|seed[-\s]?phrase|recovery[-\s]?phrase|mnemonic|private[-\s]?key)\b"""
+        "(?i)$NB(password|passwd|pwd|secret|credential|api${SEP}key|token|seed${SEP}phrase|" +
+            "recovery${SEP}phrase|mnemonic|private${SEP}key)$NA"
     )
 
     /** Bank-account / IBAN / routing labels. */
     val ACCOUNT_LABEL: Regex = Regex(
-        """(?i)\b(iban|account[-\s]?number|routing[-\s]?number|sort[-\s]?code|swift|bic)\b"""
+        "(?i)$NB(iban|account${SEP}number|routing${SEP}number|sort${SEP}code|swift|bic)$NA"
     )
 
     /** Government-id labels (SSN / national insurance / aadhaar / national id). */
     val GOV_ID_LABEL: Regex = Regex(
-        """(?i)\b(ssn|social[-\s]?security|national[-\s]?(insurance|id)|aadhaar|tax[-\s]?id|passport[-\s]?(no|number))\b"""
+        "(?i)$NB(ssn|social${SEP}security|national${SEP}(insurance|id)|aadhaar|tax${SEP}id|" +
+            "passport${SEP}(no|number))$NA"
     )
 
     /**
