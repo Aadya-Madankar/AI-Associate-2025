@@ -169,6 +169,22 @@ class GeminiToolMapper(moshi: Moshi = defaultMoshi()) {
             AgentToolSchemas.TORCH to ActionType.TORCH,
             AgentToolSchemas.BRIGHTNESS to ActionType.BRIGHTNESS,
             AgentToolSchemas.SET_DND to ActionType.DO_NOT_DISTURB,
+            "set_volume" to ActionType.MEDIA_VOLUME,
+            "media_play_pause" to ActionType.MEDIA_PLAY_PAUSE,
+            "open_wifi_panel" to ActionType.WIFI_PANEL,
+            "open_bluetooth_settings" to ActionType.BLUETOOTH_SETTINGS,
+            // Intents / deep links
+            "navigate" to ActionType.MAPS_NAVIGATE,
+            "open_settings" to ActionType.OPEN_SETTINGS_PAGE,
+            "email_draft" to ActionType.EMAIL_DRAFT,
+            "sms_draft" to ActionType.SMS_DRAFT,
+            "dial" to ActionType.DIAL_PREFILL,
+            "add_event" to ActionType.ADD_CALENDAR_EVENT,
+            "set_alarm" to ActionType.SET_ALARM,
+            "set_timer" to ActionType.SET_TIMER,
+            "share" to ActionType.SHARE,
+            // Screen capture
+            "take_screenshot" to ActionType.TAKE_SCREENSHOT,
             // On-device skill memory (SAFE, reversible — deliberately NOT in IRREVERSIBLE_TYPES).
             AgentToolSchemas.SAVE_SKILL to ActionType.SAVE_SKILL,
             AgentToolSchemas.RECALL_SKILL to ActionType.RECALL_SKILL,

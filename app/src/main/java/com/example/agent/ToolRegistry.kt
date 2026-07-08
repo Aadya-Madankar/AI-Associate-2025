@@ -1,21 +1,37 @@
 package com.example.agent
 
 import android.content.Context
+import com.example.agent.tools.AddCalendarEventTool
+import com.example.agent.tools.BluetoothSettingsTool
+import com.example.agent.tools.BrightnessTool
+import com.example.agent.tools.DialPrefillTool
+import com.example.agent.tools.DndTool
+import com.example.agent.tools.EmailDraftTool
 import com.example.agent.tools.GetScreenTool
 import com.example.agent.tools.InputTextTool
 import com.example.agent.tools.LongPressTool
+import com.example.agent.tools.MapsNavigateTool
+import com.example.agent.tools.MediaPlayPauseTool
+import com.example.agent.tools.MediaVolumeTool
 import com.example.agent.tools.OpenAppTool
 import com.example.agent.tools.OpenNotificationsTool
+import com.example.agent.tools.OpenSettingsPageTool
 import com.example.agent.tools.OpenUrlTool
 import com.example.agent.tools.PressBackTool
 import com.example.agent.tools.PressHomeTool
 import com.example.agent.tools.PressRecentsTool
 import com.example.agent.tools.ScrollTool
+import com.example.agent.tools.SetAlarmTool
+import com.example.agent.tools.SetTimerTool
+import com.example.agent.tools.ShareTool
+import com.example.agent.tools.SmsDraftTool
 import com.example.agent.tools.SwipeTool
+import com.example.agent.tools.TakeScreenshotTool
 import com.example.agent.tools.TapTool
 import com.example.agent.tools.TorchTool
 import com.example.agent.tools.UpdateSelfPromptTool
 import com.example.agent.tools.WebSearchTool
+import com.example.agent.tools.WifiPanelTool
 import com.example.config.PersonaStore
 import com.example.skill.JsonFileSkillStore
 import com.example.skill.SkillStore
@@ -105,6 +121,25 @@ class ToolRegistry(context: Context) {
                 OpenUrlTool(context),
                 WebSearchTool(context),
                 TorchTool(context),
+                // System toggles + hardware
+                BrightnessTool(context),
+                DndTool(context),
+                MediaVolumeTool(context),
+                MediaPlayPauseTool(context),
+                WifiPanelTool(context),
+                BluetoothSettingsTool(context),
+                // Intents / deep links (SAFE drafts — nothing sends without a user tap)
+                MapsNavigateTool(context),
+                OpenSettingsPageTool(context),
+                EmailDraftTool(context),
+                SmsDraftTool(context),
+                DialPrefillTool(context),
+                AddCalendarEventTool(context),
+                SetAlarmTool(context),
+                SetTimerTool(context),
+                ShareTool(context),
+                // Screen capture (a11y takeScreenshot, API 30+)
+                TakeScreenshotTool(),
                 // On-device memory + self-authored prompt.
                 SaveSkillTool(skillStore),
                 ListSkillsTool(skillStore),
