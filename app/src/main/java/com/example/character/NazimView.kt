@@ -17,8 +17,7 @@ private const val TAG = "NazimView"
  *
  * Primary path: load `assets/nazim.glb` with SceneView/Filament via [NazimRenderer] and drive
  * its facial morph targets every frame from the live [amplitude] (visemes) and [state]
- * (expression). Reuses the exact SceneView API that `com.example.avatar.AvatarView` already
- * uses and which is known to work with `io.github.sceneview:sceneview:2.3.3`.
+ * (expression). Uses the SceneView API known to work with `io.github.sceneview:sceneview:2.3.3`.
  *
  * Fallback path: if the GLB is **not** bundled, or anything in the 3D path throws, render
  * [NazimFallbackPortrait] (a stylized realistic portrait + aurora halo) instead. This
@@ -42,20 +41,14 @@ fun NazimView(
 
     // Runtime asset probe: only attempt the SceneView path if nazim.glb is actually bundled.
     val hasModel = remember { NazimAssets.hasModel(context) }
-    val hasPortrait = remember { NazimAssets.hasPortrait(context) }
 
     // If the 3D path fails at runtime we flip this and never touch SceneView again this session.
     var sceneFailed by remember { mutableStateOf(false) }
 
-    // Fallback ladder when there is no animated GLB (or the 3D path failed):
-    //   ① an animated portrait PNG (photoreal MetaHuman render), else
-    //   ② the procedural vector portrait. The screen is never blank.
+    // Fallback when there is no animated GLB (or the 3D path failed): the procedural vector
+    // portrait. The screen is never blank.
     if (!hasModel || sceneFailed) {
-        if (hasPortrait) {
-            NazimPortraitAvatar(state = state, amplitude = amplitude, persona = persona, modifier = modifier)
-        } else {
-            NazimFallbackPortrait(state = state, amplitude = amplitude, persona = persona, modifier = modifier)
-        }
+        NazimFallbackPortrait(state = state, amplitude = amplitude, persona = persona, modifier = modifier)
         return
     }
 

@@ -130,12 +130,6 @@ class NazimExpressionController(seed: Long = 4242L) {
     /** Read-only view of the current expression blendshape weights (all clamped 0..1). */
     val weights: Map<String, Float> get() = mutableWeights
 
-    /** The current resolved [ExpressionPreset] for the active state (for debug/UI). */
-    val currentPreset: ExpressionPreset get() = preset
-
-    /** The current resolved [IdleAnimation] for the active state (for the renderer). */
-    val currentIdleAnimation: IdleAnimation get() = idle
-
     /**
      * Set the conversational [NazimState]. Re-derives the [ExpressionPreset] and
      * [IdleAnimation]; the facial pose then cross-fades toward the new preset over subsequent

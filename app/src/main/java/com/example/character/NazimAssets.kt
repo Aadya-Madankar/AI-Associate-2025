@@ -24,24 +24,9 @@ object NazimAssets {
 
     /**
      * Path passed to SceneView's `ModelLoader.createModelInstance(...)`. SceneView resolves
-     * this relative to the `assets/` root, mirroring the `avatar.glb` loading in
-     * `com.example.avatar.AvatarView`.
+     * this relative to the `assets/` root.
      */
     const val MODEL_PATH: String = "nazim.glb"
-
-    /**
-     * Optional single portrait render of Nazim (asset path ① — easiest MetaHuman use: render a
-     * front portrait PNG and drop it here). [NazimPortraitAvatar] animates it when the GLB is
-     * absent. See NAZIM_ASSETS.md.
-     */
-    const val PORTRAIT_ASSET: String = "nazim_portrait.png"
-
-    /** True iff a Nazim portrait image is bundled (used as a mid-tier fallback below the GLB). */
-    fun hasPortrait(context: Context): Boolean = try {
-        context.assets.list("")?.any { it.equals(PORTRAIT_ASSET, ignoreCase = true) } == true
-    } catch (t: Throwable) {
-        false
-    }
 
     /**
      * Returns `true` iff [MODEL_ASSET] is bundled in the APK's `assets/` directory.
