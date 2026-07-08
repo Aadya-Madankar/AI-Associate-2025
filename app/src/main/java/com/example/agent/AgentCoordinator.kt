@@ -4,9 +4,9 @@ import android.app.Application
 import android.util.Log
 import com.example.accessibility.Accessibility
 import com.example.accessibility.ScreenState
-import com.example.audit.AuditEntry
 import com.example.audit.AuditLog
 import com.example.audit.AuditOutcome
+import com.example.audit.AuditRecord
 import com.example.di.ServiceLocator
 import com.example.live.LiveFunctionCall
 import com.example.live.LiveFunctionResponse
@@ -567,7 +567,7 @@ class AgentCoordinator(
         scope.launch {
             runCatching {
                 auditLog.record(
-                    AuditEntry(
+                    AuditRecord(
                         id = UUID.randomUUID().toString(),
                         timestampMs = System.currentTimeMillis(),
                         mode = mode,

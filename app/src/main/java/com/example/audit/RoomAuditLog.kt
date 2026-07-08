@@ -1,19 +1,17 @@
 package com.example.audit
 
 import android.content.Context
-import com.example.audit.AuditMappers.toEntity
-import com.example.audit.AuditMappers.toEntry
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Room-backed implementation of the [AuditLog] contract.
+ * Room-backed implementation of the [AuditLog] contract. [AuditRecord] is the Room row, so no
+ * entity <-> contract mapping is needed here.
  *
  * Both operations are `suspend` and run on an IO dispatcher so disk access never blocks the
- * caller's thread (typically the agent loop / ViewModel main scope). Entity <-> contract
- * conversion is delegated to [AuditMappers]; raw literal params are never stored — only a
- * random per-entry id carried on [AuditEntry.paramsHash].
+ * caller's thread (typically the agent loop / ViewModel main scope). Raw literal params are
+ * never stored — only a random per-entry id carried on [AuditRecord.paramsHash].
  *
  * @param dao the underlying DAO.
  * @param ioDispatcher dispatcher for the blocking Room calls; overridable for tests.
@@ -23,12 +21,12 @@ class RoomAuditLog(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AuditLog {
 
-    override suspend fun record(entry: AuditEntry) = withContext(ioDispatcher) {
-        dao.insert(entry.toEntity())
+    override suspend fun record(entry: AuditRecord) = withContext(ioDispatcher) {
+        dao.insert(entry)
     }
 
-    override suspend fun recent(limit: Int): List<AuditEntry> = withContext(ioDispatcher) {
-        dao.recent(limit).map { it.toEntry() }
+    override suspend fun recent(limit: Int): List<AuditRecord> = withContext(ioDispatcher) {
+        dao.recent(limit)
     }
 
     companion object {

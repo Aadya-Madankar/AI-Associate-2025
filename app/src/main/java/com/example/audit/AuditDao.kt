@@ -21,7 +21,7 @@ interface AuditDao {
      * historical row — keeping the log truly append-only and idempotent on the stable id.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(entity: AuditEntity)
+    suspend fun insert(entity: AuditRecord)
 
     /**
      * Returns the most recent [limit] rows, newest first.
@@ -29,5 +29,5 @@ interface AuditDao {
      * @param limit maximum number of rows to return.
      */
     @Query("SELECT * FROM audit_entries ORDER BY timestampMs DESC LIMIT :limit")
-    suspend fun recent(limit: Int): List<AuditEntity>
+    suspend fun recent(limit: Int): List<AuditRecord>
 }
