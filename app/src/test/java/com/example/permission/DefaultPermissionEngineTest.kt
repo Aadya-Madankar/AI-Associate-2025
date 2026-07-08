@@ -91,4 +91,18 @@ class DefaultPermissionEngineTest {
             decision is PermissionDecision.Allow
         )
     }
+
+    @Test
+    fun `locked keyguard blocks with SecureReason KEYGUARD even for a benign tap`() {
+        // Bug B: DefaultSecureContextDetector.inspectWithKeyguard already implements
+        // "locked -> KEYGUARD", but nothing on the decide() path called it. A benign,
+        // non-commit tap that would otherwise auto-run under AUTO must instead block.
+        val screen = screenWith(tapElement(0, "Continue"))
+        val decision = engine.decide(tap(0), AutonomyMode.AUTO, screen, keyguardLocked = true)
+        assertTrue(
+            "A locked device must block with SecureReason.KEYGUARD",
+            decision is PermissionDecision.Block &&
+                (decision as PermissionDecision.Block).secureReason == SecureReason.KEYGUARD
+        )
+    }
 }

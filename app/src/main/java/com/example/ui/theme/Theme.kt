@@ -1,12 +1,8 @@
 package com.example.ui.theme
 
-import android.app.Activity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
 
 /**
  * XENO: Living Presence — dark color scheme mapped from the Xeno design system.
@@ -58,29 +54,15 @@ internal val XenoDarkColorScheme =
   )
 
 /**
- * Root theme for Xeno Live. Applies the Living Presence dark scheme, type and shapes, and —
- * when hosted in an [Activity] — draws edge-to-edge with transparent system bars and light
- * (white) bar icons, so the single ambient presence glow reaches the screen edges.
+ * Root theme for Xeno Live. Applies the Living Presence dark scheme, type and shapes.
+ *
+ * System-bar appearance (edge-to-edge + icon contrast) is NOT set here — [com.example.MainActivity]
+ * is the single owner of that, since it draws dark icons for the warm-light (XenoWarm)
+ * canvas; a second writer here previously raced it and could leave white-on-cream
+ * (invisible) status-bar icons depending on write order.
  */
 @Composable
 fun MyApplicationTheme(content: @Composable () -> Unit) {
-  val view = LocalView.current
-  if (!view.isInEditMode) {
-    SideEffect {
-      (view.context as? Activity)?.window?.let { window ->
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        @Suppress("DEPRECATION")
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        val controller = WindowCompat.getInsetsController(window, view)
-        // Dark theme → light (white) status/nav bar icons.
-        controller.isAppearanceLightStatusBars = false
-        controller.isAppearanceLightNavigationBars = false
-      }
-    }
-  }
-
   MaterialTheme(
     colorScheme = XenoDarkColorScheme,
     typography = XenoTypography,

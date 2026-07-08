@@ -32,8 +32,9 @@ import com.example.security.SensitivePatterns
  * placeholder is itself treated as evidence of suppressed sensitive content.
  *
  * Keyguard ([SecureReason.KEYGUARD]) is surfaced via [inspectWithKeyguard] because the
- * bare [ScreenState] contract carries no explicit keyguard flag; the accessibility
- * service supplies that out of band when it has it.
+ * bare [ScreenState] contract carries no explicit keyguard flag; the permission-gate
+ * caller ([com.example.permission.PermissionEngine.decide]) supplies that out of band
+ * from [android.app.KeyguardManager].
  *
  * Pure and stateless. The denylisted-package source lives in [DenyLists] (user-editable
  * at runtime); the OTP/CVV/PIN/card/IBAN "what looks like a secret" patterns live solely
@@ -96,12 +97,12 @@ class DefaultSecureContextDetector : SecureContextDetector {
     }
 
     /**
-     * As [inspect], but lets the caller (the accessibility service, which knows the
-     * keyguard state) force a [SecureReason.KEYGUARD] verdict, which outranks
-     * everything else.
+     * As [inspect], but lets the caller (the permission gate, which reads
+     * [android.app.KeyguardManager]) force a [SecureReason.KEYGUARD] verdict, which
+     * outranks everything else.
      */
-    fun inspectWithKeyguard(screen: ScreenState?, keyguardShowing: Boolean): SecureReason {
-        if (keyguardShowing) return SecureReason.KEYGUARD
+    override fun inspectWithKeyguard(screen: ScreenState?, keyguardLocked: Boolean): SecureReason {
+        if (keyguardLocked) return SecureReason.KEYGUARD
         return inspect(screen)
     }
 

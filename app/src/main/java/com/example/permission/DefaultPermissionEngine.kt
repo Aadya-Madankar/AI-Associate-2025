@@ -43,9 +43,10 @@ class DefaultPermissionEngine(
     override fun decide(
         action: AgentAction,
         mode: AutonomyMode,
-        screen: ScreenState?
+        screen: ScreenState?,
+        keyguardLocked: Boolean
     ): PermissionDecision {
-        val secureReason = detector.inspect(screen)
+        val secureReason = detector.inspectWithKeyguard(screen, keyguardLocked)
 
         // ---- Layer 1: global denylist (apps + action types) → hard Block ----
         if (DenyLists.isDenylistedActionType(action.type)) {

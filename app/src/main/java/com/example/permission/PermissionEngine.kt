@@ -13,12 +13,29 @@ import com.example.accessibility.ScreenState
  *   4. per-action/per-app allow rules + current mode → Allow or Confirm
  */
 interface PermissionEngine {
-    fun decide(action: AgentAction, mode: AutonomyMode, screen: ScreenState?): PermissionDecision
+    /**
+     * @param keyguardLocked true when the device is currently locked (keyguard showing);
+     *   forces [SecureReason.KEYGUARD] ahead of every other secure-context signal.
+     *   Defaults to `false` for callers that have no keyguard reading.
+     */
+    fun decide(
+        action: AgentAction,
+        mode: AutonomyMode,
+        screen: ScreenState?,
+        keyguardLocked: Boolean = false
+    ): PermissionDecision
 }
 
 /** Detects sensitive/secure contexts that must block automation regardless of mode. */
 interface SecureContextDetector {
     fun inspect(screen: ScreenState?): SecureReason
+
+    /**
+     * As [inspect], but lets the caller assert a locked keyguard — which forces
+     * [SecureReason.KEYGUARD] ahead of every other signal — since the bare [ScreenState]
+     * carries no keyguard flag of its own.
+     */
+    fun inspectWithKeyguard(screen: ScreenState?, keyguardLocked: Boolean): SecureReason
 }
 
 /** Persisted allow/deny rules (DataStore-backed). */

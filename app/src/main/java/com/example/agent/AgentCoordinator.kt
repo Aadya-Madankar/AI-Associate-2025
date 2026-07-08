@@ -278,7 +278,10 @@ class AgentCoordinator(
 
         // --- The permission gate (denylist → forced-ask → secure-context → mode/rule). ---
         val mode = currentMode()
-        return when (val decision = permissionEngine.decide(action, mode, screen)) {
+        // Fail-secure: a null KeyguardManager (no keyguard service) is treated as locked,
+        // mirroring AgentAccessibilityService.isKeyguardActive's fail-secure default.
+        val keyguardLocked = ServiceLocator.keyguardManager?.isKeyguardLocked ?: true
+        return when (val decision = permissionEngine.decide(action, mode, screen, keyguardLocked)) {
             is PermissionDecision.Allow ->
                 executeAllowed(callId, toolName, action, mode, decision.reason, confirmed = false)
 

@@ -1,6 +1,7 @@
 package com.example.di
 
 import android.app.Application
+import android.app.KeyguardManager
 import android.content.Context
 import com.example.agent.DefaultPhoneControlExecutor
 import com.example.agent.PhoneControlExecutor
@@ -166,6 +167,21 @@ object ServiceLocator {
                 classifier = riskClassifier,
                 ruleStore = ruleStore
             ).also { _permissionEngine = it }
+
+    @Volatile private var _keyguardManager: KeyguardManager? = null
+
+    /**
+     * The system [KeyguardManager], read by the permission-gate caller
+     * (`AgentCoordinator`) before every [permissionEngine].`decide(...)` so a locked
+     * device forces [com.example.permission.SecureReason.KEYGUARD]. `null` only on the
+     * (effectively unreachable) devices with no keyguard service — callers must treat a
+     * `null` fail-secure (as locked), matching the codebase's other keyguard checks
+     * ([com.example.accessibility.AgentAccessibilityService.isKeyguardActive]).
+     */
+    val keyguardManager: KeyguardManager?
+        @Synchronized get() = _keyguardManager
+            ?: (requireContext().getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)
+                ?.also { _keyguardManager = it }
 
     // --- Runaway-loop guards ------------------------------------------------------
 
