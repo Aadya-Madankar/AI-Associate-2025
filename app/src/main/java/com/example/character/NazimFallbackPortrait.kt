@@ -25,8 +25,8 @@ import androidx.compose.ui.graphics.lerp
 import com.example.core.CompanionState
 import com.example.models.Persona
 import com.example.ui.components.AuroraOrb
+import com.example.ui.components.NazimDarkPalette
 import com.example.ui.theme.Motion
-import com.example.ui.theme.XenoColors
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -40,14 +40,14 @@ import kotlin.math.sin
  * Restyled to **XENO: Living Presence** (DESIGN.md): a calm, premium, minimal portrait of a real
  * person quietly present with you. XENO is the hero; everything recedes. The face is a softly
  * shaded head/shoulders bust set in ONE quiet [AuroraOrb] presence glow that breathes slowly.
- * There is no rainbow — a SINGLE soft electric-blue accent ([XenoColors.AccentSolid]) lights the
+ * There is no rainbow — a SINGLE soft electric-blue accent ([NazimDarkPalette.AccentSolid]) lights the
  * face and drives the only crisp, voice-reactive rim, sparingly. Depth is built from light
- * (radial form + a top-lit [XenoColors.GlassHighlight] sheen and [XenoColors.GlassStroke]-weight
+ * (radial form + a top-lit [NazimDarkPalette.GlassHighlight] sheen and [NazimDarkPalette.GlassStroke]-weight
  * contours), never from heavy shadow or stacked gradients.
  *
  * Everything is drawn with [Canvas], so this has no asset dependencies and cannot fail to load.
  * Skin tones are intentionally local constants — the token palette has no flesh hues — but every
- * light, sheen and accent is driven by the committed [XenoColors] / [Motion] tokens.
+ * light, sheen and accent is driven by the committed [NazimDarkPalette] / [Motion] tokens.
  */
 @Composable
 fun NazimFallbackPortrait(
@@ -207,7 +207,7 @@ private fun DrawScope.drawShoulders(path: Path, cx: Float, headCy: Float, headR:
     drawPath(
         path = path,
         brush = Brush.verticalGradient(
-            colors = listOf(XenoColors.Surface1, XenoColors.BgRaised, XenoColors.BgBase),
+            colors = listOf(NazimDarkPalette.Surface1, NazimDarkPalette.BgRaised, NazimDarkPalette.BgBase),
             startY = top,
             endY = size.height
         )
@@ -216,7 +216,7 @@ private fun DrawScope.drawShoulders(path: Path, cx: Float, headCy: Float, headR:
     path.reset()
     path.moveTo(cx - headR * 1.9f, top - headR * 0.04f)
     path.quadraticBezierTo(cx, top - headR * 0.34f, cx + headR * 1.9f, top - headR * 0.04f)
-    drawPath(path, color = XenoColors.GlassStroke, style = Stroke(width = headR * 0.02f))
+    drawPath(path, color = NazimDarkPalette.GlassStroke, style = Stroke(width = headR * 0.02f))
 }
 
 private fun DrawScope.drawNeck(cx: Float, headCy: Float, headR: Float) {
@@ -261,7 +261,7 @@ private fun DrawScope.drawHead(cx: Float, cy: Float, r: Float, keyLight: Color) 
     // 3. Faint top-lit sheen on the brow/forehead — the soft glass highlight of the language.
     drawOval(
         brush = Brush.radialGradient(
-            colors = listOf(XenoColors.GlassHighlight, Color.Transparent),
+            colors = listOf(NazimDarkPalette.GlassHighlight, Color.Transparent),
             center = Offset(cx - r * 0.22f, cy - r * 0.55f),
             radius = r * 0.85f
         ),
@@ -288,7 +288,7 @@ private fun DrawScope.drawHair(path: Path, cx: Float, cy: Float, r: Float) {
     drawPath(
         path = path,
         brush = Brush.verticalGradient(
-            colors = listOf(XenoColors.BgBase, XenoColors.Surface1),
+            colors = listOf(NazimDarkPalette.BgBase, NazimDarkPalette.Surface1),
             startY = cy - r * 1.2f,
             endY = cy
         )
@@ -297,7 +297,7 @@ private fun DrawScope.drawHair(path: Path, cx: Float, cy: Float, r: Float) {
     path.reset()
     path.moveTo(cx - r * 0.72f, cy - r * 0.78f)
     path.quadraticBezierTo(cx, cy - r * 1.12f, cx + r * 0.72f, cy - r * 0.78f)
-    drawPath(path, color = XenoColors.GlassStroke, style = Stroke(width = r * 0.03f))
+    drawPath(path, color = NazimDarkPalette.GlassStroke, style = Stroke(width = r * 0.03f))
 }
 
 private fun DrawScope.drawEye(path: Path, center: Offset, r: Float, open: Float, iris: Color) {
@@ -320,10 +320,10 @@ private fun DrawScope.drawEye(path: Path, center: Offset, r: Float, open: Float,
             radius = irisR * openC.coerceAtMost(1f),
             center = center
         )
-        drawCircle(XenoColors.TextOnAccent, radius = irisR * 0.4f * openC, center = center)
+        drawCircle(NazimDarkPalette.TextOnAccent, radius = irisR * 0.4f * openC, center = center)
         // Crisp catchlight — the glint of life.
         drawCircle(
-            XenoColors.TextPrimary.copy(alpha = 0.85f),
+            NazimDarkPalette.TextPrimary.copy(alpha = 0.85f),
             radius = r * 0.12f,
             center = Offset(center.x - irisR * 0.3f, center.y - irisR * 0.3f)
         )
@@ -420,28 +420,28 @@ private val MouthInnerColor = Color(0xFF240D14)
 private val BrowColor = Color(0xFF1E1A24)
 
 // Sclera reuses the off-white text token so the face never introduces a pure white.
-private val ScleraColor = XenoColors.TextPrimary
+private val ScleraColor = NazimDarkPalette.TextPrimary
 
 private const val TWO_PI = (2.0 * PI).toFloat()
 
 /**
  * Resolves the light hue for the current [state]. The new direction is a SINGLE restrained accent,
  * not a rainbow: every conversational state stays inside the one soft electric-blue family
- * ([XenoColors.AccentSolid] and its muted blue-family tints), gently biased toward the active
+ * ([NazimDarkPalette.AccentSolid] and its muted blue-family tints), gently biased toward the active
  * [persona] accent so the face quietly reflects who is present. ERROR is the one muted exception.
  * Mirrors [AuroraOrb] so the presence glow and the portrait read as one coherent calm light.
  */
 private fun stateAccent(state: NazimState, persona: Persona): Color {
-    val personaHue = persona.primaryColors.firstOrNull() ?: XenoColors.PersonaAccent
+    val personaHue = persona.primaryColors.firstOrNull() ?: NazimDarkPalette.AccentSolid
     val stateHue = when (state) {
-        NazimState.LISTENING -> XenoColors.AccentCyan
-        NazimState.THINKING -> XenoColors.AccentViolet
-        NazimState.SPEAKING -> XenoColors.AccentMagenta
-        NazimState.ACTING -> XenoColors.AccentSolid
-        NazimState.WALKING -> XenoColors.AccentSolid
-        NazimState.RUNNING -> XenoColors.AccentSolid
-        NazimState.ERROR -> XenoColors.Error
-        NazimState.IDLE -> XenoColors.AccentSolid
+        NazimState.LISTENING -> NazimDarkPalette.AccentCyan
+        NazimState.THINKING -> NazimDarkPalette.AccentViolet
+        NazimState.SPEAKING -> NazimDarkPalette.AccentMagenta
+        NazimState.ACTING -> NazimDarkPalette.AccentSolid
+        NazimState.WALKING -> NazimDarkPalette.AccentSolid
+        NazimState.RUNNING -> NazimDarkPalette.AccentSolid
+        NazimState.ERROR -> NazimDarkPalette.Error
+        NazimState.IDLE -> NazimDarkPalette.AccentSolid
     }
     // Bias toward the state hue but keep the persona's identity present; both sit in the one accent.
     return lerp(personaHue, stateHue, 0.45f)

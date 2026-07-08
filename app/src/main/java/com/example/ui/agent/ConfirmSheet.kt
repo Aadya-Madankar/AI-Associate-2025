@@ -58,8 +58,8 @@ import com.example.permission.ConfirmRequest
 import com.example.permission.RiskTier
 import com.example.permission.RuleScope
 import com.example.ui.theme.Motion
-import com.example.ui.theme.XenoColors
 import com.example.ui.theme.XenoShapeTokens
+import com.example.ui.theme.XenoWarm
 
 /**
  * Bottom-sheet confirmation surface for a single agent action awaiting the user's
@@ -86,12 +86,12 @@ import com.example.ui.theme.XenoShapeTokens
  * `TYPE_ACCESSIBILITY_OVERLAY` window so it floats above the target app and the dispatch
  * path cannot defeat it; here it is a plain [ModalBottomSheet] driven by the caller.
  *
- * Styling follows XENO: Living Presence (DESIGN.md): a 26dp-top frosted sheet over a deep
- * scrim, ONE calm ambient presence glow that breathes slowly behind the header (the single
- * accent — never a risk-coloured rainbow), generous negative space, hairline borders and a
- * soft top-lit sheen, literal values in a quiet nested glass card, and well-spaced pill
- * actions with a gentle spring press. The risk tier reads through a single muted semantic
- * badge, not by recolouring the whole surface.
+ * Styling follows XENO: Warm Light (DESIGN.md): a 26dp-top frosted sheet over a soft scrim,
+ * ONE calm ambient presence glow that breathes slowly behind the header (never a
+ * risk-coloured rainbow), generous negative space, hairline borders and a soft top-lit sheen,
+ * literal values in a quiet nested glass card, and well-spaced pill actions with a gentle
+ * spring press. The risk tier reads through a single muted semantic badge, not by
+ * recolouring the whole surface.
  *
  * @param request      what to render; `null` dismisses the sheet (renders nothing).
  * @param onDecision   the user's choice — `(scope, allowed)`. `scope` is the [RuleScope]
@@ -125,8 +125,8 @@ fun ConfirmSheet(
     var acknowledged by remember(request) { mutableStateOf(false) }
 
     // The risk tier's muted semantic hue. It tints ONLY the small badge / warning — never the
-    // whole surface. XENO's single accent ([AccentSolid]) carries the presence glow instead,
-    // so the sheet reads calm, not risk-coloured (DESIGN §"One accent").
+    // whole surface. XENO's warm-charcoal presence glow carries the header instead, so the
+    // sheet reads calm, not risk-coloured (DESIGN §"One accent").
     val riskHue: Color = riskTint(request.tier)
 
     // ONE ambient loop for the whole sheet (motion budget): a slow breath that drifts the
@@ -148,9 +148,9 @@ fun ConfirmSheet(
         onDismissRequest = { onDecision(null, false) },
         sheetState = sheetState,
         shape = XenoShapeTokens.Sheet,
-        containerColor = XenoColors.BgRaised,
-        contentColor = XenoColors.TextPrimary,
-        scrimColor = XenoColors.Scrim
+        containerColor = XenoWarm.SurfaceStrong,
+        contentColor = XenoWarm.TextPrimary,
+        scrimColor = XenoWarm.Scrim
     ) {
         Column(
             modifier = modifier
@@ -166,15 +166,15 @@ fun ConfirmSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(XenoShapeTokens.Card)
-                    .background(XenoColors.Surface1)
+                    .background(XenoWarm.Surface)
                     .drawBehind {
                         // The single presence glow — one calm accent radiating from the top
                         // and dissolving fully into the frosted surface. Not risk-coloured.
                         drawRect(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    XenoColors.AccentSolid.copy(alpha = 0.16f * breath),
-                                    XenoColors.AccentSolid.copy(alpha = 0.05f * breath),
+                                    XenoWarm.TextPrimary.copy(alpha = 0.16f * breath),
+                                    XenoWarm.TextPrimary.copy(alpha = 0.05f * breath),
                                     Color.Transparent
                                 ),
                                 center = Offset(size.width * 0.20f, size.height * 0.10f),
@@ -184,13 +184,13 @@ fun ConfirmSheet(
                         // Soft top-lit inner sheen — depth from light, never shadow.
                         drawRect(
                             brush = Brush.verticalGradient(
-                                colors = XenoColors.GlassOverlay,
+                                colors = listOf(XenoWarm.Sheen, Color.Transparent),
                                 startY = 0f,
                                 endY = size.height * 0.55f
                             )
                         )
                     }
-                    .border(1.dp, XenoColors.GlassStrokeStrong, XenoShapeTokens.Card)
+                    .border(1.dp, XenoWarm.Hairline, XenoShapeTokens.Card)
                     .padding(horizontal = 22.dp, vertical = 22.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -199,7 +199,7 @@ fun ConfirmSheet(
                     Text(
                         text = request.title.ifBlank { "Confirm action" },
                         style = MaterialTheme.typography.headlineMedium,
-                        color = XenoColors.TextPrimary,
+                        color = XenoWarm.TextPrimary,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -216,8 +216,8 @@ fun ConfirmSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(XenoShapeTokens.CardInner)
-                        .background(XenoColors.Surface2)
-                        .border(1.dp, XenoColors.GlassStroke, XenoShapeTokens.CardInner)
+                        .background(XenoWarm.BgMid)
+                        .border(1.dp, XenoWarm.Hairline, XenoShapeTokens.CardInner)
                         .padding(horizontal = 20.dp, vertical = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -227,7 +227,7 @@ fun ConfirmSheet(
                                 Modifier
                                     .fillMaxWidth()
                                     .height(1.dp)
-                                    .background(XenoColors.GlassStroke)
+                                    .background(XenoWarm.Hairline)
                             )
                         }
                         LiteralRow(label = label, value = value)
@@ -245,7 +245,7 @@ fun ConfirmSheet(
                     } else {
                         "This action can't be undone."
                     },
-                    tint = if (requiresAck) XenoColors.Error else XenoColors.Warning
+                    tint = if (requiresAck) XenoWarm.Error else XenoWarm.Warning
                 )
             }
 
@@ -255,8 +255,8 @@ fun ConfirmSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(XenoShapeTokens.Control)
-                        .background(XenoColors.Error.copy(alpha = 0.08f))
-                        .border(1.dp, XenoColors.Error.copy(alpha = 0.32f), XenoShapeTokens.Control)
+                        .background(XenoWarm.Error.copy(alpha = 0.08f))
+                        .border(1.dp, XenoWarm.Error.copy(alpha = 0.32f), XenoShapeTokens.Control)
                         .padding(start = 8.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -265,15 +265,15 @@ fun ConfirmSheet(
                         checked = acknowledged,
                         onCheckedChange = { acknowledged = it },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = XenoColors.Error,
-                            uncheckedColor = XenoColors.Error,
-                            checkmarkColor = XenoColors.TextOnAccent
+                            checkedColor = XenoWarm.Error,
+                            uncheckedColor = XenoWarm.Error,
+                            checkmarkColor = XenoWarm.TextOnDark
                         )
                     )
                     Text(
                         text = "I understand this is a blocked or secure screen.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = XenoColors.TextPrimary,
+                        color = XenoWarm.TextPrimary,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -286,21 +286,21 @@ fun ConfirmSheet(
                 if (requiresAck) {
                     PrimaryAction(
                         label = "Deny",
-                        container = XenoColors.AccentSolid,
-                        content = XenoColors.TextOnAccent,
+                        container = XenoWarm.TextPrimary,
+                        content = XenoWarm.TextOnDark,
                         onClick = { onDecision(null, false) }
                     )
                     SecondaryAction(
                         label = "Allow once",
-                        content = XenoColors.Error,
+                        content = XenoWarm.Error,
                         enabled = acknowledged,
                         onClick = { onDecision(RuleScope.ONCE, true) }
                     )
                 } else {
                     PrimaryAction(
                         label = "Allow once",
-                        container = XenoColors.AccentSolid,
-                        content = XenoColors.TextOnAccent,
+                        container = XenoWarm.TextPrimary,
+                        content = XenoWarm.TextOnDark,
                         onClick = { onDecision(RuleScope.ONCE, true) }
                     )
 
@@ -309,7 +309,7 @@ fun ConfirmSheet(
                     if (alwaysScope != null) {
                         SecondaryAction(
                             label = alwaysScope.allowLabel(),
-                            content = XenoColors.AccentSolid,
+                            content = XenoWarm.TextPrimary,
                             onClick = { onDecision(alwaysScope, true) }
                         )
                     }
@@ -318,7 +318,7 @@ fun ConfirmSheet(
                         onClick = { onDecision(null, false) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = XenoShapeTokens.Pill,
-                        colors = ButtonDefaults.textButtonColors(contentColor = XenoColors.TextSecondary)
+                        colors = ButtonDefaults.textButtonColors(contentColor = XenoWarm.TextSecondary)
                     ) { Text("Deny", style = MaterialTheme.typography.labelLarge) }
                 }
             }
@@ -358,8 +358,8 @@ private fun AppChip(app: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .clip(XenoShapeTokens.Pill)
-            .background(XenoColors.Surface2)
-            .border(1.dp, XenoColors.GlassStroke, XenoShapeTokens.Pill)
+            .background(XenoWarm.BgMid)
+            .border(1.dp, XenoWarm.Hairline, XenoShapeTokens.Pill)
             .padding(start = 11.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -369,12 +369,12 @@ private fun AppChip(app: String, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(6.dp)
                 .clip(XenoShapeTokens.Pill)
-                .background(XenoColors.AccentSolid)
+                .background(XenoWarm.TextPrimary)
         )
         Text(
             text = app,
             style = MaterialTheme.typography.labelMedium,
-            color = XenoColors.TextSecondary,
+            color = XenoWarm.TextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -391,12 +391,12 @@ private fun LiteralRow(label: String, value: String, modifier: Modifier = Modifi
         Text(
             text = label.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = XenoColors.TextTertiary
+            color = XenoWarm.TextTertiary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = XenoColors.TextPrimary
+            color = XenoWarm.TextPrimary
         )
     }
 }
@@ -423,7 +423,7 @@ private fun WarningNote(text: String, tint: Color, modifier: Modifier = Modifier
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
-            color = XenoColors.TextSecondary,
+            color = XenoWarm.TextSecondary,
             modifier = Modifier.weight(1f)
         )
     }
@@ -487,20 +487,20 @@ private fun SecondaryAction(
         shape = XenoShapeTokens.Pill,
         border = BorderStroke(
             1.dp,
-            if (enabled) content.copy(alpha = 0.38f) else XenoColors.GlassStroke
+            if (enabled) content.copy(alpha = 0.38f) else XenoWarm.Hairline
         ),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = content,
-            disabledContentColor = XenoColors.TextTertiary
+            disabledContentColor = XenoWarm.TextTertiary
         )
     ) { Text(label, style = MaterialTheme.typography.labelLarge) }
 }
 
 /** The single muted semantic hue that tints a tier's badge and warning (never the surface). */
 private fun riskTint(tier: RiskTier): Color = when (tier) {
-    RiskTier.SAFE -> XenoColors.Success
-    RiskTier.GUARDED -> XenoColors.Warning
-    RiskTier.BLOCKED -> XenoColors.Error
+    RiskTier.SAFE -> XenoWarm.Success
+    RiskTier.GUARDED -> XenoWarm.Warning
+    RiskTier.BLOCKED -> XenoWarm.Error
 }
 
 /** The "Always allow…" button copy that makes the persisted [RuleScope] explicit. */

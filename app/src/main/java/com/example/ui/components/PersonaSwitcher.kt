@@ -45,11 +45,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.models.Persona
 import com.example.ui.theme.Motion
-import com.example.ui.theme.XenoColors
 import com.example.ui.theme.XenoShapeTokens
+import com.example.ui.theme.XenoWarm
 
-// Obsidian Aurora: a card avatar's halo radius is a fraction of the avatar size, so the
-// triad wash blooms from one quadrant and dissolves before the circular edge.
+// XENO: Warm Light — a card avatar's halo radius is a fraction of the avatar size, so the
+// iridescent wash blooms from one quadrant and dissolves before the circular edge.
 private const val AvatarSizeDp = 56f
 
 /**
@@ -85,9 +85,9 @@ fun PersonaSwitcher(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = XenoColors.BgRaised,
-        contentColor = XenoColors.TextPrimary,
-        scrimColor = XenoColors.Scrim,
+        containerColor = XenoWarm.SurfaceStrong,
+        contentColor = XenoWarm.TextPrimary,
+        scrimColor = XenoWarm.Scrim,
         shape = XenoShapeTokens.Sheet,
         dragHandle = { SheetHandle() }
     ) {
@@ -98,14 +98,14 @@ fun PersonaSwitcher(
         ) {
             Text(
                 text = "Choose your companion",
-                color = XenoColors.TextPrimary,
+                color = XenoWarm.TextPrimary,
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp)
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Each presence carries its own voice and aura",
-                color = XenoColors.TextSecondary,
+                color = XenoWarm.TextSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp)
             )
@@ -141,7 +141,7 @@ private fun SheetHandle() {
                 .width(36.dp)
                 .height(4.dp)
                 .clip(XenoShapeTokens.Pill)
-                .background(XenoColors.GlassStrokeStrong)
+                .background(XenoWarm.Hairline)
         )
     }
 }
@@ -153,8 +153,8 @@ private fun PersonaCard(
     breathPulse: Float,
     onClick: () -> Unit
 ) {
-    val haloHue = persona.primaryColors.firstOrNull() ?: XenoColors.AccentViolet
-    val secondaryHue = persona.primaryColors.getOrNull(1) ?: XenoColors.AccentSolid
+    val haloHue = persona.primaryColors.firstOrNull() ?: XenoWarm.Iris3
+    val secondaryHue = persona.primaryColors.getOrNull(1) ?: XenoWarm.Iris4
 
     // Selection reads as a brighter top-lit glass edge tinted toward the persona hue;
     // unselected cards keep a quiet hairline so nothing competes for attention.
@@ -167,7 +167,7 @@ private fun PersonaCard(
                 )
             )
         } else {
-            SolidColor(XenoColors.GlassStroke)
+            SolidColor(XenoWarm.Hairline)
         }
     }
 
@@ -177,7 +177,7 @@ private fun PersonaCard(
         modifier = Modifier
             .width(154.dp)
             .clip(XenoShapeTokens.Card)
-            .background(if (selected) XenoColors.Surface2 else XenoColors.Surface1)
+            .background(if (selected) XenoWarm.BgMid else XenoWarm.Surface)
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
                 brush = cardBorder,
@@ -201,7 +201,7 @@ private fun PersonaCard(
         Spacer(Modifier.height(16.dp))
         Text(
             text = persona.name,
-            color = XenoColors.TextPrimary,
+            color = XenoWarm.TextPrimary,
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -209,7 +209,7 @@ private fun PersonaCard(
         Spacer(Modifier.height(4.dp))
         Text(
             text = persona.title,
-            color = XenoColors.TextSecondary,
+            color = XenoWarm.TextSecondary,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -217,7 +217,7 @@ private fun PersonaCard(
         Spacer(Modifier.height(10.dp))
         Text(
             text = persona.description,
-            color = XenoColors.TextTertiary,
+            color = XenoWarm.TextTertiary,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -277,14 +277,14 @@ private fun PersonaAvatar(
                 )
                 .border(
                     width = 1.dp,
-                    color = XenoColors.GlassStrokeStrong,
+                    color = XenoWarm.Hairline,
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = label,
-                color = XenoColors.TextOnAccent,
+                color = XenoWarm.TextOnDark,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )

@@ -2,7 +2,7 @@ package com.example.character
 
 import androidx.compose.ui.graphics.Color
 import com.example.models.Persona
-import com.example.ui.theme.XenoColors
+import com.example.ui.components.NazimDarkPalette
 
 /**
  * The single, persistent identity of Xeno Live: **XENO** — a conversational AI created by
@@ -133,9 +133,9 @@ object NazimPersona {
             "(I'll open in Hindi, then follow whatever language you speak.)",
         systemInstruction = SYSTEM_INSTRUCTION,
         primaryColors = listOf(
-            XenoColors.AccentViolet,
-            XenoColors.AccentCyan,
-            XenoColors.AccentMagenta,
+            NazimDarkPalette.AccentViolet,
+            NazimDarkPalette.AccentCyan,
+            NazimDarkPalette.AccentMagenta,
             Color(0x005EE1FF)
         ),
         voiceName = VOICE_NAME,

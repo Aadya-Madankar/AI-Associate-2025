@@ -20,11 +20,32 @@ import androidx.compose.ui.graphics.lerp
 import com.example.core.CompanionState
 import com.example.models.Persona
 import com.example.ui.theme.Motion
-import com.example.ui.theme.XenoColors
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+
+/**
+ * Same-value replacement for the deleted dark theme tokens Nazim's render pipeline depended
+ * on ([AuroraOrb], [com.example.character.NazimFallbackPortrait],
+ * [com.example.character.NazimPersona]) — the app's live theme is [com.example.ui.theme.XenoWarm]
+ * now, but Nazim's own rendered look must stay byte-identical (NazimPortraitScreenshotTest
+ * golden), so these keep the exact former dark-token hex values under this new home.
+ */
+internal object NazimDarkPalette {
+  val BgBase = Color(0xFF07080A)
+  val BgRaised = Color(0xFF0C0E12)
+  val Surface1 = Color(0xFF111318)
+  val GlassStroke = Color(0xFFFFFFFF).copy(alpha = 0.07f)
+  val GlassHighlight = Color(0xFFFFFFFF).copy(alpha = 0.045f)
+  val AccentSolid = Color(0xFF5B8DEF)
+  val AccentCyan = Color(0xFF7FB0F5)
+  val AccentViolet = Color(0xFF6E9BF0)
+  val AccentMagenta = Color(0xFF8FA8F2)
+  val TextPrimary = Color(0xFFF3F5F9)
+  val TextOnAccent = Color(0xFF050A14)
+  val Error = Color(0xFFEC6A78)
+}
 
 /**
  * Obsidian Aurora — the ambient presence halo.
@@ -96,8 +117,8 @@ fun AuroraOrb(
     // ── Hue — persona accent tints the core; the triad colours the field/rim. ──
     // Derived once per persona/state change; no allocation in the draw loop.
     val accent = remember(persona, state) { stateAccent(state, persona) }
-    val haloMid = XenoColors.AccentViolet
-    val haloEdge = XenoColors.AccentMagenta
+    val haloMid = NazimDarkPalette.AccentViolet
+    val haloEdge = NazimDarkPalette.AccentMagenta
 
     // Reusable field path — mutated in place each frame to avoid per-frame allocation.
     val fieldPath = remember { Path() }
@@ -166,7 +187,7 @@ fun AuroraOrb(
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    XenoColors.TextPrimary.copy(alpha = 0.10f + 0.22f * glow),
+                    NazimDarkPalette.TextPrimary.copy(alpha = 0.10f + 0.22f * glow),
                     accent.copy(alpha = 0.16f + 0.16f * energy),
                     Color.Transparent
                 ),
@@ -182,10 +203,10 @@ fun AuroraOrb(
         drawCircle(
             brush = Brush.sweepGradient(
                 colors = listOf(
-                    XenoColors.AccentCyan.copy(alpha = rimAlpha),
-                    XenoColors.AccentViolet.copy(alpha = rimAlpha),
-                    XenoColors.AccentMagenta.copy(alpha = rimAlpha),
-                    XenoColors.AccentCyan.copy(alpha = rimAlpha)
+                    NazimDarkPalette.AccentCyan.copy(alpha = rimAlpha),
+                    NazimDarkPalette.AccentViolet.copy(alpha = rimAlpha),
+                    NazimDarkPalette.AccentMagenta.copy(alpha = rimAlpha),
+                    NazimDarkPalette.AccentCyan.copy(alpha = rimAlpha)
                 ),
                 center = Offset(cx, cy)
             ),
@@ -202,13 +223,13 @@ fun AuroraOrb(
  * the companion is doing. Falls back to the committed triad tokens.
  */
 private fun stateAccent(state: CompanionState, persona: Persona): Color {
-    val personaHue = persona.primaryColors.firstOrNull() ?: XenoColors.PersonaAccent
+    val personaHue = persona.primaryColors.firstOrNull() ?: NazimDarkPalette.AccentSolid
     val stateHue = when (state) {
-        CompanionState.LISTENING -> XenoColors.AccentCyan
-        CompanionState.THINKING -> XenoColors.AccentViolet
-        CompanionState.SPEAKING -> XenoColors.AccentMagenta
-        CompanionState.ERROR -> XenoColors.Error
-        else -> XenoColors.PersonaAccent
+        CompanionState.LISTENING -> NazimDarkPalette.AccentCyan
+        CompanionState.THINKING -> NazimDarkPalette.AccentViolet
+        CompanionState.SPEAKING -> NazimDarkPalette.AccentMagenta
+        CompanionState.ERROR -> NazimDarkPalette.Error
+        else -> NazimDarkPalette.AccentSolid
     }
     // Blend the persona's identity with the conversational state hue.
     return lerp(personaHue, stateHue, 0.5f)

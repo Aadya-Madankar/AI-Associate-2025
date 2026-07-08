@@ -6,17 +6,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Icon
@@ -28,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -43,8 +39,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.Motion
-import com.example.ui.theme.XenoColors
 import com.example.ui.theme.XenoShapeTokens
+import com.example.ui.theme.XenoWarm
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -59,11 +55,11 @@ import kotlin.math.sin
  * `TYPE_ACCESSIBILITY_OVERLAY`) so it survives across apps and can't be obscured by the
  * automated target; here it is a plain composable the caller positions.
  *
- * Obsidian Aurora styling: STOP is the one place a semantic hue ([XenoColors.Error] — a
+ * XENO: Warm Light styling: STOP is the one place a semantic hue ([XenoWarm.Error] — a
  * calm coral, never an alarming fire-engine red) is promoted to a solid hit. It reads as a
  * floating glass pill lit from within, ringed by a soft halo that *breathes* on the ambient
  * 4s cycle so it stays unmistakable while a task runs, yet never strobes or shouts. Depth
- * comes from light — a radial halo that dissolves into the obsidian plus a lit top edge —
+ * comes from light — a radial halo that dissolves into the warm canvas plus a lit top edge —
  * not from heavy shadow. Press answers with a gentle spring.
  *
  * Motion budget: a single infinite transition drives the calm breath (halo alpha + a
@@ -73,19 +69,16 @@ import kotlin.math.sin
  *                 switch isn't already tripped).
  * @param onStop   invoked on tap to trigger the kill switch.
  * @param modifier applied to the button; the caller positions it (e.g. bottom-end).
- * @param expanded when true, shows a labelled pill ("STOP"); when false, a compact FAB-style
- *                 circle. Defaults to expanded for unmissable visibility while acting.
  */
 @Composable
 fun KillSwitchOverlay(
     visible: Boolean,
     onStop: () -> Unit,
-    modifier: Modifier = Modifier,
-    expanded: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     if (!visible) return
 
-    val stop = XenoColors.Error
+    val stop = XenoWarm.Error
 
     // One infinite transition for all ambient life: a slow, organic breath phase. Kept as a
     // State and read only inside draw/layer lambdas (deferred to the draw phase) so the
@@ -120,116 +113,40 @@ fun KillSwitchOverlay(
         scaleY = s
     }
 
-    if (expanded) {
-        Surface(
-            onClick = onStop,
-            shape = XenoShapeTokens.Pill,
-            color = Color.Transparent,
-            interactionSource = interaction,
-            modifier = modifier
-                .graphicsLayer(liveScale)
-                .semanticsStop()
+    Surface(
+        onClick = onStop,
+        shape = XenoShapeTokens.Pill,
+        color = Color.Transparent,
+        interactionSource = interaction,
+        modifier = modifier
+            .graphicsLayer(liveScale)
+            .semanticsStop()
+    ) {
+        Row(
+            modifier = Modifier
+                .stopPillGlass(stop, breath)
+                .padding(horizontal = 22.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Row(
-                modifier = Modifier
-                    .stopPillGlass(stop, breath)
-                    .padding(horizontal = 22.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Stop,
-                    contentDescription = null,
-                    tint = XenoColors.TextOnAccent,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "STOP",
-                    color = XenoColors.TextOnAccent,
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-        }
-    } else {
-        val orbSize = 60.dp
-        val ringExtent = 22.dp
-        Box(
-            modifier = modifier.size(orbSize + ringExtent * 2),
-            contentAlignment = Alignment.Center
-        ) {
-            // Breathing halo behind the orb — dissolves into the obsidian. `breath()` is read
-            // here in the draw phase, so the pulse redraws without recomposing.
-            Canvas(modifier = Modifier.size(orbSize + ringExtent * 2)) {
-                val c = Offset(size.width / 2f, size.height / 2f)
-                val r = size.minDimension / 2f
-                val inner = 0.16f + 0.16f * breath()
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            stop.copy(alpha = inner),
-                            stop.copy(alpha = inner * 0.4f),
-                            Color.Transparent
-                        ),
-                        center = c,
-                        radius = r
-                    ),
-                    radius = r,
-                    center = c
-                )
-            }
-
-            Surface(
-                onClick = onStop,
-                shape = CircleShape,
-                color = Color.Transparent,
-                interactionSource = interaction,
-                modifier = Modifier
-                    .size(orbSize)
-                    .graphicsLayer(liveScale)
-                    .semanticsStop()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(orbSize)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(modifier = Modifier.size(orbSize)) {
-                        val c = Offset(size.width / 2f, size.height / 2f)
-                        val r = size.minDimension / 2f
-                        // Solid accent orb, top-lit radial for depth.
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(stop, stop.copy(alpha = 0.85f)),
-                                center = Offset(c.x, c.y - r * 0.35f),
-                                radius = r * 1.4f
-                            ),
-                            radius = r,
-                            center = c
-                        )
-                        // Lit top edge — light, not shadow.
-                        drawCircle(
-                            color = XenoColors.GlassStrokeStrong,
-                            radius = r - 1f,
-                            center = c,
-                            style = Stroke(width = 2f)
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Rounded.Stop,
-                        contentDescription = "Stop the agent",
-                        tint = XenoColors.TextOnAccent,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
+            Icon(
+                imageVector = Icons.Rounded.Stop,
+                contentDescription = null,
+                tint = XenoWarm.TextOnDark,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "STOP",
+                color = XenoWarm.TextOnDark,
+                style = MaterialTheme.typography.labelMedium
+            )
         }
     }
 }
 
 /**
- * The expanded pill's glass recipe, drawn behind its content and tracking the measured
+ * The STOP pill's glass recipe, drawn behind its content and tracking the measured
  * size: a soft breathing halo, a solid accent base lit from the top by a radial sheen, and
  * a hairline lit top edge. Light, not shadow. Brushes are cached and only the breath alpha
  * varies per frame.
@@ -247,7 +164,7 @@ private fun Modifier.stopPillGlass(stop: Color, breath: () -> Float): Modifier =
             endY = size.height
         )
         val sheen = Brush.verticalGradient(
-            colors = listOf(XenoColors.GlassHighlight, Color.Transparent),
+            colors = listOf(XenoWarm.Sheen, Color.Transparent),
             startY = 0f,
             endY = size.height * 0.5f
         )
@@ -273,7 +190,7 @@ private fun Modifier.stopPillGlass(stop: Color, breath: () -> Float): Modifier =
             drawRoundRect(brush = sheen, cornerRadius = CornerRadius(pillR))
             // Brighter lit top edge — a hairline of light.
             drawRoundRect(
-                color = XenoColors.GlassStrokeStrong,
+                color = XenoWarm.Hairline,
                 cornerRadius = CornerRadius(pillR),
                 style = Stroke(width = 2f)
             )
