@@ -268,7 +268,25 @@ class SensitivePatternsTest {
             "card_number_field",
             "otp_digit_1",
             "pin_code_field",
-            "social_security_number"
+            "social_security_number",
+            // Unbounded-substring breadth: the old DenyLists regex matched `password` /
+            // `passcode` as BARE substrings (no boundaries at all), so plurals, camelCase
+            // resource ids (the most common Android spelling for password fields), and
+            // embedded forms all matched. The union must keep that breadth.
+            "Passwords",
+            "Passcodes",
+            "passwordField",
+            "passwordInput",
+            "passwords_list",
+            "mypassword",
+            "password123",
+            // Multi-word tokens: the old DenyLists used [\s_-]* (zero-or-MORE separators)
+            // between words, so doubled/mixed separators matched.
+            "card  number",
+            "card__number",
+            "card - number",
+            "security  code",
+            "routing  number"
         )
         for (example in examples) {
             assertTrue(
@@ -289,7 +307,13 @@ class SensitivePatternsTest {
             "4111 1111 1111 1111",
             "4111-1111-1111-1111",
             "DE89370400440532013000",     // compact IBAN
-            "GB29NWBK60161331926819"      // compact IBAN, no spaces
+            "GB29NWBK60161331926819",     // compact IBAN, no spaces
+            // Embedded digit runs: the old DenyLists used (?<!\d)\d{4,8}(?!\d) — a digit
+            // run bounded by NON-DIGITS, which fires inside mixed alphanumeric tokens of
+            // any length. \b-anchored digit runs and length-limited alnum classes both
+            // miss these.
+            "abcdefghi12345",
+            "orderRef12345"
         )
         for (example in examples) {
             assertTrue(

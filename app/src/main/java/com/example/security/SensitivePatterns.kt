@@ -41,8 +41,9 @@ object SensitivePatterns {
     private const val NA = "(?![A-Za-z0-9])"
 
     /** Optional run of the separators seen in prose ("one time") and resource ids
-     * ("one_time"/"one-time"). */
-    private const val SEP = "[-\\s_]?"
+     * ("one_time"/"one-time"). Zero-or-MORE — matching the old DenyLists breadth — so
+     * doubled/mixed separators ("card  number", "card__number", "card - number") match. */
+    private const val SEP = "[-\\s_]*"
 
     /**
      * The redaction token substituted in place of any sensitive run. Chosen to be
@@ -61,9 +62,14 @@ object SensitivePatterns {
             "auth(?:entication)?${SEP}code|2fa|mfa)$NA"
     )
 
-    /** Card-security-code labels (CVV / CVC / CVC2 / CID / security code). */
+    /**
+     * Card-security-code labels (CVV / CVC / CVC2 / CID / security code).
+     * `security code` is an UNBOUNDED substring (as in the old DenyLists regex) so
+     * embedded forms ("cybersecurity code") match too; it also subsumes
+     * "card security code".
+     */
     val CVV_LABEL: Regex = Regex(
-        "(?i)$NB(cvv|cvc|cvc2|cvv2|cid|card${SEP}security${SEP}code|security${SEP}code)$NA"
+        "(?i)($NB(cvv|cvc|cvc2|cvv2|cid)$NA|security${SEP}code)"
     )
 
     /** Card / PAN labels (including a bare "card #" / "card#" suffix). */
@@ -72,15 +78,25 @@ object SensitivePatterns {
             "|(?i)${NB}card[-\\s_]*#"
     )
 
-    /** PIN labels (boundary-anchored so "spinner" does not match, "pin_code" does). */
+    /**
+     * PIN labels. `pin` stays boundary-anchored so "spinner"/"opinion" do not match
+     * ("pin_code" still does via the non-alnum lookarounds); `passcode` is an UNBOUNDED
+     * substring (as in the old DenyLists regex) so "Passcodes"/"myPasscode" match.
+     */
     val PIN_LABEL: Regex = Regex(
-        "(?i)$NB(pin|passcode)$NA"
+        "(?i)(${NB}pin$NA|passcode)"
     )
 
-    /** Password / secret / credential labels. */
+    /**
+     * Password / secret / credential labels. `password` is an UNBOUNDED substring (as in
+     * the old DenyLists regex): camelCase resource ids ("passwordField"/"passwordInput" —
+     * the most common Android spelling), plurals ("Passwords"), and embedded forms
+     * ("mypassword", "password123") must all match; the word is long enough that
+     * accidental substring hits are not a realistic false-positive source.
+     */
     val PASSWORD_LABEL: Regex = Regex(
-        "(?i)$NB(password|passwd|pwd|secret|credential|api${SEP}key|token|seed${SEP}phrase|" +
-            "recovery${SEP}phrase|mnemonic|private${SEP}key)$NA"
+        "(?i)(password|$NB(passwd|pwd|secret|credential|api${SEP}key|token|seed${SEP}phrase|" +
+            "recovery${SEP}phrase|mnemonic|private${SEP}key)$NA)"
     )
 
     /** Bank-account / IBAN / routing labels. */
@@ -88,10 +104,13 @@ object SensitivePatterns {
         "(?i)$NB(iban|account${SEP}number|routing${SEP}number|sort${SEP}code|swift|bic)$NA"
     )
 
-    /** Government-id labels (SSN / national insurance / aadhaar / national id). */
+    /**
+     * Government-id labels (SSN / national insurance / aadhaar / national id).
+     * `social security` is an UNBOUNDED substring, as in the old DenyLists regex.
+     */
     val GOV_ID_LABEL: Regex = Regex(
-        "(?i)$NB(ssn|social${SEP}security|national${SEP}(insurance|id)|aadhaar|tax${SEP}id|" +
-            "passport${SEP}(no|number))$NA"
+        "(?i)($NB(ssn|national${SEP}(insurance|id)|aadhaar|tax${SEP}id|" +
+            "passport${SEP}(no|number))$NA|social${SEP}security)"
     )
 
     /**
@@ -139,12 +158,15 @@ object SensitivePatterns {
     )
 
     /**
-     * OTP / short numeric code: a standalone 4–8 digit run. Like [CVV_VALUE] this is
-     * deliberately broad and is only applied as a *value* pattern when policy allows
-     * redacting short digit runs, or when a sensitive label was detected nearby.
+     * OTP / short numeric code: a 4–8 digit run bounded by NON-DIGITS (the old
+     * DenyLists lookaround form, not `\b`), so it also fires inside mixed alphanumeric
+     * tokens of any length ("orderRef12345", "abcdefghi12345") where a `\b`-anchored run
+     * or a length-limited alnum class would miss. Like [CVV_VALUE] this is deliberately
+     * broad and is only applied as a *value* pattern when policy allows redacting short
+     * digit runs, or when a sensitive label was detected nearby.
      */
     val OTP_VALUE: Regex = Regex(
-        """\b\d{4,8}\b"""
+        """(?<!\d)\d{4,8}(?!\d)"""
     )
 
     /**
