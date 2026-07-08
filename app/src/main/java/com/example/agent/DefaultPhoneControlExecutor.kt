@@ -2,6 +2,7 @@ package com.example.agent
 
 import android.content.Context
 import android.util.Log
+import com.example.agent.tools.ToolArgs
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -35,7 +36,7 @@ class DefaultPhoneControlExecutor(
             return ToolResult.Completed(
                 toolName = name,
                 callId = callId,
-                success = args.readBooleanArg("success") ?: true,
+                success = ToolArgs.boolArg(args, "success") ?: true,
                 summary = (args["summary"] as? String).orEmpty()
             )
         }
@@ -73,13 +74,5 @@ class DefaultPhoneControlExecutor(
 
     private companion object {
         private const val TAG = "PhoneControlExecutor"
-
-        /** Coerce a JSON-decoded arg to Boolean, tolerating string/number forms. */
-        fun Map<String, Any?>.readBooleanArg(key: String): Boolean? = when (val v = this[key]) {
-            is Boolean -> v
-            is String -> v.trim().toBooleanStrictOrNull()
-            is Number -> v.toInt() != 0
-            else -> null
-        }
     }
 }

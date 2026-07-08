@@ -56,7 +56,7 @@ class LongPressTool : AgentTool {
                 error = "Accessibility service is not ready; cannot long-press."
             )
 
-        val index = args.intArg("index")
+        val index = ToolArgs.intArg(args, "index")
             ?: return ToolResult.Failure(
                 toolName = declaration.name,
                 callId = callId,
@@ -135,12 +135,4 @@ class LongPressTool : AgentTool {
             )
         }
     }
-}
-
-/** Coerce a loosely-typed function-call argument to [Int] (Gemini may send Long/Double/String). */
-private fun Map<String, Any?>.intArg(key: String): Int? = when (val v = this[key]) {
-    is Int -> v
-    is Number -> v.toInt()
-    is String -> v.trim().toIntOrNull()
-    else -> null
 }

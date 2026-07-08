@@ -48,13 +48,13 @@ class ScrollTool : AgentTool {
                 error = "Accessibility service is not ready; cannot scroll."
             )
 
-        val index = args.intArg("index")
+        val index = ToolArgs.intArg(args, "index")
             ?: return ToolResult.Failure(
                 toolName = declaration.name,
                 callId = callId,
                 error = "Missing or invalid 'index' argument."
             )
-        val forward = args.boolArg("forward")
+        val forward = ToolArgs.boolArg(args, "forward")
             ?: return ToolResult.Failure(
                 toolName = declaration.name,
                 callId = callId,
@@ -80,23 +80,4 @@ class ScrollTool : AgentTool {
             )
         }
     }
-}
-
-/** Coerce a loosely-typed function-call argument to [Int] (Gemini may send Long/Double/String). */
-private fun Map<String, Any?>.intArg(key: String): Int? = when (val v = this[key]) {
-    is Int -> v
-    is Number -> v.toInt()
-    is String -> v.trim().toIntOrNull()
-    else -> null
-}
-
-/** Coerce a loosely-typed function-call argument to [Boolean] (tolerates "true"/"false"). */
-private fun Map<String, Any?>.boolArg(key: String): Boolean? = when (val v = this[key]) {
-    is Boolean -> v
-    is String -> when (v.trim().lowercase()) {
-        "true" -> true
-        "false" -> false
-        else -> null
-    }
-    else -> null
 }

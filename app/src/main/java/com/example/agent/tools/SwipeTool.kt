@@ -67,10 +67,10 @@ class SwipeTool : AgentTool {
                 error = "Accessibility service is not ready; cannot swipe."
             )
 
-        val x1 = args.intArg("x1")
-        val y1 = args.intArg("y1")
-        val x2 = args.intArg("x2")
-        val y2 = args.intArg("y2")
+        val x1 = ToolArgs.intArg(args, "x1")
+        val y1 = ToolArgs.intArg(args, "y1")
+        val x2 = ToolArgs.intArg(args, "x2")
+        val y2 = ToolArgs.intArg(args, "y2")
         if (x1 == null || y1 == null || x2 == null || y2 == null) {
             return ToolResult.Failure(
                 toolName = declaration.name,
@@ -98,14 +98,6 @@ class SwipeTool : AgentTool {
             )
         }
     }
-}
-
-/** Coerce a loosely-typed function-call argument to [Int] (Gemini may send Long/Double/String). */
-private fun Map<String, Any?>.intArg(key: String): Int? = when (val v = this[key]) {
-    is Int -> v
-    is Number -> v.toInt()
-    is String -> v.trim().toIntOrNull()
-    else -> null
 }
 
 /** Coerce a loosely-typed function-call argument to [Long]. */

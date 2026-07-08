@@ -4,8 +4,6 @@ import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
  * Captures microphone audio as PCM16 mono @ 16kHz for streaming to Gemini Live.
@@ -25,9 +23,6 @@ class AudioCapture {
 
         // Target ~100ms of audio per read (16000 samples/s * 2 bytes * 0.1s).
         private const val MIN_FRAME_BYTES = SAMPLE_RATE * 2 / 10
-
-        // Full-scale value for 16-bit signed PCM, used to normalize RMS to 0..1.
-        private const val PCM16_FULL_SCALE = 32768.0
     }
 
     @Volatile
@@ -96,7 +91,7 @@ class AudioCapture {
                 if (read > 0) {
                     val chunk = frame.copyOf(read)
                     onPcm(chunk)
-                    onAmplitude(computeRms(chunk, read))
+                    onAmplitude(pcm16Rms(chunk, read))
                 } else if (read == AudioRecord.ERROR_INVALID_OPERATION || read == AudioRecord.ERROR_BAD_VALUE) {
                     break
                 }
@@ -149,25 +144,5 @@ class AudioCapture {
         } catch (t: Throwable) {
             null
         }
-    }
-
-    /** Normalized RMS amplitude (0..1) for a little-endian PCM16 buffer. */
-    private fun computeRms(buffer: ByteArray, lengthBytes: Int): Float {
-        val sampleCount = lengthBytes / 2
-        if (sampleCount <= 0) return 0f
-
-        var sumSquares = 0.0
-        var i = 0
-        while (i + 1 < lengthBytes) {
-            val lo = buffer[i].toInt() and 0xFF
-            val hi = buffer[i + 1].toInt() // sign-extended high byte
-            val sample = (hi shl 8) or lo
-            val norm = sample / PCM16_FULL_SCALE
-            sumSquares += norm * norm
-            i += 2
-        }
-
-        val rms = sqrt(sumSquares / sampleCount)
-        return min(1.0, rms).toFloat()
     }
 }

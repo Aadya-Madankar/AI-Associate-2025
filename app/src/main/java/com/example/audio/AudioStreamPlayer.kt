@@ -5,8 +5,6 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import java.util.concurrent.LinkedBlockingQueue
-import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
  * Streams PCM16 mono @ 24kHz audio out through an [AudioTrack] in MODE_STREAM.
@@ -23,8 +21,6 @@ class AudioStreamPlayer {
         private const val SAMPLE_RATE = 24000
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT
-
-        private const val PCM16_FULL_SCALE = 32768.0
 
         // Sentinel chunk used to wake the worker thread for shutdown.
         private val POISON = ByteArray(0)
@@ -110,7 +106,7 @@ class AudioStreamPlayer {
     fun write(pcm: ByteArray) {
         if (!running || pcm.isEmpty()) return
         // Report amplitude immediately so the avatar reacts as audio arrives.
-        onAmplitude?.invoke(computeRms(pcm))
+        onAmplitude?.invoke(pcm16Rms(pcm, pcm.size))
         queue.offer(pcm)
     }
 
@@ -186,26 +182,5 @@ class AudioStreamPlayer {
             AudioTrack.MODE_STREAM,
             AudioManager.AUDIO_SESSION_ID_GENERATE
         )
-    }
-
-    /** Normalized RMS amplitude (0..1) for a little-endian PCM16 buffer. */
-    private fun computeRms(buffer: ByteArray): Float {
-        val lengthBytes = buffer.size
-        val sampleCount = lengthBytes / 2
-        if (sampleCount <= 0) return 0f
-
-        var sumSquares = 0.0
-        var i = 0
-        while (i + 1 < lengthBytes) {
-            val lo = buffer[i].toInt() and 0xFF
-            val hi = buffer[i + 1].toInt() // sign-extended high byte
-            val sample = (hi shl 8) or lo
-            val norm = sample / PCM16_FULL_SCALE
-            sumSquares += norm * norm
-            i += 2
-        }
-
-        val rms = sqrt(sumSquares / sampleCount)
-        return min(1.0, rms).toFloat()
     }
 }
