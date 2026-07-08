@@ -16,8 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
  *    "press" (Punch) animation, so you watch a little person operate your phone.
  *  - [conversationState] / [amplitude]: mirrored from the live session so the roaming avatar shows
  *    the same expression and lip-syncs to XENO's voice while it is not actively walking.
- *  - [roamActive]: true while the overlay is up, so the gesture path can briefly lead the real tap
- *    (let the avatar arrive and "hit" the target before the tap actually lands).
+ *  - [roamActive]: true while the overlay is up. The real tap dispatches immediately and never
+ *    waits on the avatar; [emitTap] is fire-and-forget so the avatar just walks/animates toward
+ *    the spot late or concurrently instead of gating input latency on its travel time.
  */
 object OverlayBus {
 

@@ -6,7 +6,6 @@ import android.graphics.Path
 import android.os.Handler
 import android.os.Looper
 import kotlin.coroutines.resume
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
@@ -32,10 +31,9 @@ class GestureDispatcher(
      */
     suspend fun tap(x: Int, y: Int, durationMs: Long = TAP_DURATION_MS): Boolean {
         // Tell the roaming XENO avatar (if on screen) to walk/run to this spot and "press" it.
+        // Fire-and-forget: the real tap dispatches immediately below and never waits on the
+        // overlay's walk animation, which just plays out late/concurrently instead.
         com.example.overlay.OverlayBus.emitTap(x, y)
-        // While roaming, give the avatar a brief head-start so you watch it arrive and hit the
-        // target right as the real tap lands — the "walk over, then tap" illusion. No-op otherwise.
-        if (com.example.overlay.OverlayBus.roamActive) delay(ROAM_TAP_LEAD_MS)
         val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
         // Clamp duration to the platform's positive, sane range.
         val safeDuration = durationMs.coerceIn(1L, GestureDescription.getMaxGestureDuration())
@@ -106,7 +104,9 @@ class GestureDispatcher(
         const val LONG_PRESS_DURATION_MS = 600L
         const val SWIPE_DURATION_MS = 300L
 
-        /** Head-start (ms) given to the roaming avatar to reach a tap target before it lands. */
+        // ponytail: unused since taps no longer wait on the roam avatar (fire-and-forget
+        // OverlayBus.emitTap above) — kept as a public constant in case a caller still wants
+        // the old lead-time value; delete if nothing references it after a grep sweep.
         const val ROAM_TAP_LEAD_MS = 340L
     }
 }

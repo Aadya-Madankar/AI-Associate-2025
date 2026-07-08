@@ -434,16 +434,7 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Tears down the live session and releases all audio resources. */
     fun stopSession() {
-        capture.stop()
-        player.stop()
-        liveClient?.close()
-        liveClient = null
-        runCatching { VoiceService.stop(getApplication()) }
-
-        currentTurnHasMessage = false
-        _isMicActive.value = false
-        _isConnected.value = false
-        _amplitude.value = 0f
+        stopEverything()
         if (_companionState.value != CompanionState.ERROR) {
             _companionState.value = CompanionState.IDLE
         }
@@ -480,18 +471,37 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         super.onCleared()
-        // Release audio + socket + vision synchronously; no state updates needed past this point.
-        stopVision()
-        capture.stop()
-        player.stop()
-        liveClient?.close()
-        liveClient = null
-        runCatching { VoiceService.stop(getApplication()) }
+        // Release audio + socket + vision synchronously; the flow resets inside stopEverything()
+        // are harmless no-ops here since the ViewModel (and its collectors) are already going away.
+        stopEverything()
     }
 
     // ======================================================================
     //  Internals
     // ======================================================================
+
+    /**
+     * The single teardown path, called from every place a live session ends: the user
+     * stopping it, a connect error that has exhausted key failover, the socket closing, and
+     * [onCleared]. Releases audio capture/playback, vision (camera/screen), the socket, the
+     * mic foreground service, and any in-flight tool-call loop, then resets the shared UI
+     * state flows. Callers are responsible for their own tail state (e.g. [_companionState]
+     * or [_errorMessage]) right after calling this — those differ per call site by design.
+     */
+    private fun stopEverything() {
+        capture.stop()
+        player.stop()
+        liveClient?.close()
+        liveClient = null
+        runCatching { VoiceService.stop(getApplication()) }
+        stopVision()
+        toolJob?.cancel()
+
+        currentTurnHasMessage = false
+        _isMicActive.value = false
+        _isConnected.value = false
+        _amplitude.value = 0f
+    }
 
     /**
      * Begins microphone capture once the live session is ready. Captured PCM chunks are
@@ -658,30 +668,17 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 val hint = if (sessionKeys.size > 1) " (tried ${sessionKeys.size} keys)" else ""
+                stopEverything()
                 _errorMessage.value =
                     "Couldn't connect$hint: ${t.localizedMessage ?: t.toString()}"
                 _companionState.value = CompanionState.ERROR
-                capture.stop()
-                player.stop()
-                liveClient?.close()
-                liveClient = null
-                runCatching { VoiceService.stop(getApplication()) }
-                _isMicActive.value = false
-                _isConnected.value = false
-                _amplitude.value = 0f
             }
         }
 
         override fun onClosed() {
             viewModelScope.launch {
                 if (!isCurrent()) return@launch
-                capture.stop()
-                player.stop()
-                liveClient = null
-                runCatching { VoiceService.stop(getApplication()) }
-                _isMicActive.value = false
-                _isConnected.value = false
-                _amplitude.value = 0f
+                stopEverything()
                 if (_companionState.value != CompanionState.ERROR) {
                     _companionState.value = CompanionState.IDLE
                 }
