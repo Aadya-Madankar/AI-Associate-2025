@@ -54,10 +54,12 @@ class ToolArgsTest {
     }
 
     // ------------------------------------------------------------------------
-    // boolArg — reconciled to the STRICTEST common behavior between ScrollTool.boolArg
-    // (case-insensitive String, no Number) and DefaultPhoneControlExecutor.readBooleanArg
-    // (case-sensitive String via toBooleanStrictOrNull, Number nonzero=true). Intersection:
-    // Boolean passthrough, case-sensitive "true"/"false" String only, no Number branch.
+    // boolArg — the UNION of the two legacy coercions: ScrollTool.boolArg's
+    // case-insensitive "true"/"false" String, plus DefaultPhoneControlExecutor
+    // .readBooleanArg's Number (nonzero=true, zero=false). Every input either old site
+    // accepted resolves identically under the union; it only widens on inputs neither
+    // handled. Critical live path: task_complete `success: 0` must coerce to false,
+    // never fall through to the `?: true` default (failed task reported as success).
     // ------------------------------------------------------------------------
 
     @Test
@@ -74,19 +76,20 @@ class ToolArgsTest {
     }
 
     @Test
-    fun boolArg_mixedCaseString_isNull_strictestCommon() {
-        // ScrollTool's old copy lowercased first ("True" would have parsed there); the
-        // strictest common (readBooleanArg's toBooleanStrictOrNull) does not.
-        assertNull(ToolArgs.boolArg(mapOf("k" to "True"), "k"))
-        assertNull(ToolArgs.boolArg(mapOf("k" to "FALSE"), "k"))
+    fun boolArg_mixedCaseString_parses_legacyScrollToolSemantics() {
+        // ScrollTool's old copy lowercased before matching; the union keeps that tolerance.
+        assertEquals(true, ToolArgs.boolArg(mapOf("k" to "True"), "k"))
+        assertEquals(false, ToolArgs.boolArg(mapOf("k" to "FALSE"), "k"))
     }
 
     @Test
-    fun boolArg_number_isNull_strictestCommon() {
-        // readBooleanArg's old copy accepted Number (nonzero -> true); ScrollTool's copy
-        // never did. Strictest common drops Number support.
-        assertNull(ToolArgs.boolArg(mapOf("k" to 1), "k"))
-        assertNull(ToolArgs.boolArg(mapOf("k" to 0), "k"))
+    fun boolArg_number_nonzeroTrue_zeroFalse_legacyExecutorSemantics() {
+        // readBooleanArg's old copy accepted Number (nonzero -> true, zero -> false).
+        // Live path: task_complete `success: 0` must be false, never the `?: true` default.
+        assertEquals(true, ToolArgs.boolArg(mapOf("k" to 1), "k"))
+        assertEquals(false, ToolArgs.boolArg(mapOf("k" to 0), "k"))
+        assertEquals(false, ToolArgs.boolArg(mapOf("k" to 0.0), "k"))
+        assertEquals(true, ToolArgs.boolArg(mapOf("k" to 1.0), "k"))
     }
 
     @Test
