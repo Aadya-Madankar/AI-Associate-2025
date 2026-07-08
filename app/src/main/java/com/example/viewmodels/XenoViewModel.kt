@@ -376,7 +376,7 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
         sessionKeys = availableKeys()
         if (sessionKeys.isEmpty()) {
             _apiKeyMissing.value = true
-            _errorMessage.value = "No Gemini API key yet. Tap the key icon to add one."
+            _errorMessage.value = "No Gemini API key yet. Tap the settings icon to add one."
             _companionState.value = CompanionState.ERROR
             return
         }

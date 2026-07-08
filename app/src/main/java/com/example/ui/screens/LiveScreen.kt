@@ -225,7 +225,7 @@ fun LiveScreen(viewModel: XenoViewModel) {
 
             AnimatedVisibility(visible = apiKeyMissing && errorMessage == null) {
                 InfoChip(
-                    text = "Add a Gemini API key to start — tap the key icon.",
+                    text = "Add a Gemini API key to start — tap the settings icon.",
                     tint = XenoWarm.Warning,
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp)
                 )

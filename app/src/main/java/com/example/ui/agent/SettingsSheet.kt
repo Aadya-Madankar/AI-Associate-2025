@@ -413,6 +413,13 @@ private fun ApiKeysSection(keys: List<String>, onAdd: (String) -> Unit, onRemove
         )
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "${keys.size} KEY${if (keys.size == 1) "" else "S"} · USED TOP TO BOTTOM",
+                color = XenoWarm.TextTertiary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp
+            )
             keys.forEach { key -> ApiKeyRow(masked = maskKey(key), onRemove = { onRemove(key) }) }
         }
     }
