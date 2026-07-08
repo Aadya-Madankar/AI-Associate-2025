@@ -37,10 +37,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DirectionsWalk
-import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.ScreenShare
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -79,9 +79,9 @@ import com.example.core.CompanionState
 import com.example.core.Sender
 import com.example.models.Persona
 import com.example.permission.AutonomyMode
-import com.example.ui.agent.ApiKeysSheet
 import com.example.ui.agent.ConfirmSheet
 import com.example.ui.agent.KillSwitchOverlay
+import com.example.ui.agent.SettingsSheet
 import com.example.ui.components.PersonaSwitcher
 import com.example.ui.theme.XenoWarm
 import com.example.viewmodels.XenoViewModel
@@ -110,11 +110,10 @@ fun LiveScreen(viewModel: XenoViewModel) {
     val pendingConfirm by viewModel.pendingConfirm.collectAsStateWithLifecycle()
     val agentStatus by viewModel.agentStatus.collectAsStateWithLifecycle()
     val visionState by viewModel.visionState.collectAsStateWithLifecycle()
-    val apiKeys by viewModel.apiKeys.collectAsStateWithLifecycle()
     val roamEnabled by viewModel.roamEnabled.collectAsStateWithLifecycle()
 
     var showPersonaSwitcher by remember { mutableStateOf(false) }
-    var showApiKeys by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     // Accessibility ("control access") status, refreshed each time the user returns to the app
     // (e.g. from the system Accessibility settings the chip deep-links to).
@@ -163,7 +162,7 @@ fun LiveScreen(viewModel: XenoViewModel) {
         ) {
             XenoGlyph()
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GlassIconButton(Icons.Rounded.Key, "API keys") { showApiKeys = true }
+                GlassIconButton(Icons.Rounded.Settings, "Settings") { showSettings = true }
                 GlassIconButton(Icons.Rounded.People, "Companion") { showPersonaSwitcher = true }
             }
         }
@@ -307,13 +306,8 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 onDismiss = { showPersonaSwitcher = false }
             )
         }
-        if (showApiKeys) {
-            ApiKeysSheet(
-                keys = apiKeys,
-                onAdd = { viewModel.addApiKey(it) },
-                onRemove = { viewModel.removeApiKey(it) },
-                onDismiss = { showApiKeys = false }
-            )
+        if (showSettings) {
+            SettingsSheet(onDismiss = { showSettings = false }, viewModel = viewModel)
         }
         KillSwitchOverlay(
             visible = agentStatus.active,
