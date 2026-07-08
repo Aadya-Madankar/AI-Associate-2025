@@ -30,7 +30,6 @@ class KillSwitchTest {
         // Latch flipped via both the hot-path read and the StateFlow.
         assertTrue(killSwitch.isTripped)
         assertTrue(killSwitch.tripped.value)
-        assertEquals(KillReason.HARDWARE_TRIGGER, killSwitch.lastReason.value)
 
         // Listener invoked exactly once, with the supplied reason.
         assertEquals(listOf(KillReason.HARDWARE_TRIGGER), received)
@@ -45,22 +44,11 @@ class KillSwitchTest {
         killSwitch.trigger()
 
         assertTrue(killSwitch.isTripped)
-        assertEquals(KillReason.USER_STOP, killSwitch.lastReason.value)
         assertEquals(listOf(KillReason.USER_STOP), received)
     }
 
     @Test
-    fun trigger_invokesOnTriggerCallbackOnceWithReason() {
-        val callbackReasons = mutableListOf<KillReason>()
-        val killSwitch = KillSwitch(onTrigger = { callbackReasons.add(it) })
-
-        killSwitch.trigger(KillReason.SAFETY_FALLBACK)
-
-        assertEquals(listOf(KillReason.SAFETY_FALLBACK), callbackReasons)
-    }
-
-    @Test
-    fun reset_clearsTrippedAndReason() {
+    fun reset_clearsTripped() {
         val killSwitch = KillSwitch()
         killSwitch.trigger(KillReason.ERROR)
         assertTrue(killSwitch.isTripped)
@@ -69,13 +57,11 @@ class KillSwitchTest {
 
         assertFalse(killSwitch.isTripped)
         assertFalse(killSwitch.tripped.value)
-        assertEquals(KillReason.NONE, killSwitch.lastReason.value)
     }
 
     @Test
     fun doubleTrigger_doesNotDoubleInvokeListeners() {
-        val callbackReasons = mutableListOf<KillReason>()
-        val killSwitch = KillSwitch(onTrigger = { callbackReasons.add(it) })
+        val killSwitch = KillSwitch()
 
         val received = mutableListOf<KillReason>()
         killSwitch.addListener { received.add(it) }
@@ -84,10 +70,8 @@ class KillSwitchTest {
         // Idempotent: second trigger on an already-tripped switch is a no-op.
         killSwitch.trigger(KillReason.HARDWARE_TRIGGER)
 
-        // Listener and callback fired exactly once; the first reason wins and is retained.
+        // Listener fired exactly once; the first reason wins and is retained.
         assertEquals(listOf(KillReason.USER_STOP), received)
-        assertEquals(listOf(KillReason.USER_STOP), callbackReasons)
-        assertEquals(KillReason.USER_STOP, killSwitch.lastReason.value)
         assertTrue(killSwitch.isTripped)
     }
 

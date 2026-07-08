@@ -9,20 +9,22 @@ import com.example.permission.DenyLists
  * is serialized and sent to the cloud model (ARCHITECTURE.md §4 "Redact on-device
  * before any network call"; §3.3 the screen representation handed to the model).
  *
+ * Behavior is the fixed maximum-safety (formerly "STRICT") policy — the only variant
+ * ever used in production: short digit runs and emails are redacted everywhere
+ * (including contentDescription), sensitive hints/resource-ids are dropped, and
+ * password/secure-context element text is blanked wholesale.
+ *
  * Guarantees:
  *  - Pure and side-effect-free: [redact] returns a NEW [ScreenState] / [UiElement]
  *    copies; the input is never mutated. Indices, bounds, roles, and capability flags
  *    are preserved so the executor's index→Rect grounding still resolves.
  *  - Secrets never leave the device: card numbers, IBANs, long digit runs, and opaque
  *    tokens are always replaced with [SensitivePatterns.PLACEHOLDER]; short numeric
- *    codes, emails, and sensitive descriptors are additionally scrubbed under the
- *    active [RedactionPolicy].
+ *    codes and emails are unconditionally scrubbed too.
  *  - Secure marking: when any element is a password field, carries a sensitive
- *    OTP/card label, or displays a secret-shaped VALUE (PAN/IBAN/OTP/token, and short
- *    codes under the active short-digit policy), the returned [ScreenState.secure] is
- *    set true (subject to [RedactionPolicy.markSecureOnSensitiveElement]); an
- *    already-secure input stays secure. Text on password / secure-screen elements is
- *    blanked wholesale.
+ *    OTP/card label, or displays a secret-shaped VALUE (PAN/IBAN/OTP/token, or a short
+ *    digit run), the returned [ScreenState.secure] is set true; an already-secure input
+ *    stays secure. Text on password / secure-screen elements is blanked wholesale.
  *  - Denylist fail-closed: any screen belonging to a denylisted banking / wallet /
  *    authenticator package ([DenyLists.isDenylistedPackage]) is forced
  *    [ScreenState.secure] and has every element's text/contentDescription blanked,
@@ -32,9 +34,7 @@ import com.example.permission.DenyLists
  * The redactor is stateless and thread-safe; a single shared instance ([INSTANCE])
  * can be reused across reads.
  */
-class ScreenRedactor(
-    private val policy: RedactionPolicy = RedactionPolicy.DEFAULT
-) {
+class ScreenRedactor {
 
     /**
      * Produce a redacted copy of [screen]. If [screen] is null or empty, an empty
@@ -64,7 +64,7 @@ class ScreenRedactor(
         // On a denylisted surface, all element text/contentDescription is blanked
         // wholesale (independent of password/secure flags), so free-text payee names,
         // balances, merchant strings, and notification bodies cannot leak.
-        val screenSecureBlank = denylisted || (screen.secure && policy.blankSecureElementText)
+        val screenSecureBlank = denylisted || screen.secure
 
         for (element in screen.elements) {
             val labeled = hasSensitiveLabel(element)
@@ -78,7 +78,7 @@ class ScreenRedactor(
             // scrub pattern under-matches. This is the value-side complement to label
             // detection and is a structural backstop, not a per-regex guarantee.
             val valueSensitive = SensitivePatterns.matchesSensitiveValue(
-                policy.redactShortDigitRuns,
+                true,
                 element.text,
                 element.contentDescription
             )
@@ -91,14 +91,11 @@ class ScreenRedactor(
             redactedElements += redactElement(
                 element = element,
                 forceBlankValue = forceBlankValue,
-                labeled = labeled,
                 otpLabeled = otpLabeled
             )
         }
 
-        val secure = screen.secure ||
-            denylisted ||
-            (policy.markSecureOnSensitiveElement && anySensitive)
+        val secure = screen.secure || denylisted || anySensitive
 
         return screen.copy(
             elements = redactedElements,
@@ -138,21 +135,18 @@ class ScreenRedactor(
      *
      * @param forceBlankValue when true the [UiElement.text] is replaced wholesale with
      *        the placeholder (password / secure-screen fields).
-     * @param labeled when true a sensitive label was detected, so even short/innocuous
-     *        values in this element's text are redacted regardless of policy.
      * @param otpLabeled when true an OTP-style label was detected on this element, which
      *        additionally licenses the all-letter short-code shape ([SensitivePatterns.otpLabeledValuePatterns]).
      */
     private fun redactElement(
         element: UiElement,
         forceBlankValue: Boolean,
-        labeled: Boolean,
         otpLabeled: Boolean
     ): UiElement {
         val newText = when {
             element.text.isNullOrEmpty() -> element.text
             forceBlankValue -> SensitivePatterns.PLACEHOLDER
-            else -> scrubValue(element.text, aggressiveShortRuns = labeled, otpLabeled = otpLabeled)
+            else -> scrubValue(element.text, otpLabeled = otpLabeled)
         }
 
         val newContentDescription = when {
@@ -161,14 +155,11 @@ class ScreenRedactor(
             // contentDescription (e.g. "Password, hunter2"); blank it wholesale for
             // password / secure-screen elements, independent of policy.
             forceBlankValue -> SensitivePatterns.PLACEHOLDER
-            policy.redactContentDescription ->
-                scrubValue(element.contentDescription, aggressiveShortRuns = labeled, otpLabeled = otpLabeled)
-            else -> element.contentDescription
+            else -> scrubValue(element.contentDescription, otpLabeled = otpLabeled)
         }
 
         val newHint =
-            if (policy.redactSensitiveLabels &&
-                !element.hint.isNullOrEmpty() &&
+            if (!element.hint.isNullOrEmpty() &&
                 SensitivePatterns.matchesSensitiveLabel(element.hint)
             ) {
                 SensitivePatterns.PLACEHOLDER
@@ -179,8 +170,7 @@ class ScreenRedactor(
         // Resource ids are not user-visible secrets, but a sensitive descriptor can
         // leak intent ("otp_input"); strip it under strict labeling policy.
         val newResourceId =
-            if (policy.redactSensitiveLabels &&
-                !element.resourceId.isNullOrEmpty() &&
+            if (!element.resourceId.isNullOrEmpty() &&
                 SensitivePatterns.matchesSensitiveLabel(element.resourceId)
             ) {
                 SensitivePatterns.PLACEHOLDER
@@ -209,15 +199,12 @@ class ScreenRedactor(
      * Replace every sensitive-shaped run inside [value] with the placeholder.
      *
      * Always applies [SensitivePatterns.alwaysValuePatterns] (cards / IBAN / long digit
-     * runs / opaque tokens / letters-only long runs / seed phrases). Applies short-run
-     * and email patterns when the active policy enables them, or — for short runs — when
-     * [aggressiveShortRuns] is set because a sensitive label was detected on the same
-     * element. When [otpLabeled] is set, the OTP-label-gated value shapes (all-letter
-     * short codes) are additionally applied.
+     * runs / opaque tokens / letters-only long runs / seed phrases), plus email and
+     * short-digit-run patterns unconditionally. When [otpLabeled] is set, the
+     * OTP-label-gated value shapes (all-letter short codes) are additionally applied.
      */
     private fun scrubValue(
         value: String,
-        aggressiveShortRuns: Boolean,
         otpLabeled: Boolean
     ): String {
         var result = value
@@ -226,14 +213,10 @@ class ScreenRedactor(
             result = pattern.replace(result, SensitivePatterns.PLACEHOLDER)
         }
 
-        if (policy.redactEmails) {
-            result = SensitivePatterns.EMAIL_VALUE.replace(result, SensitivePatterns.PLACEHOLDER)
-        }
+        result = SensitivePatterns.EMAIL_VALUE.replace(result, SensitivePatterns.PLACEHOLDER)
 
-        if (policy.redactShortDigitRuns || aggressiveShortRuns) {
-            for (pattern in SensitivePatterns.shortDigitPatterns) {
-                result = pattern.replace(result, SensitivePatterns.PLACEHOLDER)
-            }
+        for (pattern in SensitivePatterns.shortDigitPatterns) {
+            result = pattern.replace(result, SensitivePatterns.PLACEHOLDER)
         }
 
         // All-letter short codes are too false-positive-prone for the general short-run
@@ -248,7 +231,7 @@ class ScreenRedactor(
     }
 
     companion object {
-        /** Shared strict-policy redactor for the common cloud-bound path. */
-        val INSTANCE: ScreenRedactor = ScreenRedactor(RedactionPolicy.STRICT)
+        /** Shared redactor for the common cloud-bound path. */
+        val INSTANCE: ScreenRedactor = ScreenRedactor()
     }
 }

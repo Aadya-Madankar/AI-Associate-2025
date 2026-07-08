@@ -152,10 +152,6 @@ class DefaultPermissionEngine(
         tier: RiskTier,
         secureReason: SecureReason
     ): PermissionDecision = when (mode) {
-        // PLAN executes nothing — every action is a preview/confirm.
-        AutonomyMode.PLAN ->
-            PermissionDecision.Confirm(buildConfirmRequest(action, tier, secureReason))
-
         // ASK confirms everything.
         AutonomyMode.ASK ->
             PermissionDecision.Confirm(buildConfirmRequest(action, tier, secureReason))

@@ -24,21 +24,12 @@ import kotlinx.coroutines.flow.asStateFlow
  * [tripped] to abort anything already running.
  *
  * **Autonomy revert.** Per the [AutonomyModeStore] contract, the safety baseline must
- * drop to [AutonomyMode.ASK] when this latch fires. Supply an [onTrigger] callback (the
- * integration layer wires it to [AutonomyModeStore.resetToSafeDefault]); it is invoked
- * synchronously inside the winning [trigger] so re-arming after a panic STOP can never
- * silently resume in AUTO/BYPASS. A `KillSwitch()` with no callback (e.g. in tests) just
- * skips the revert.
+ * drop to [AutonomyMode.ASK] when this latch fires. The integration layer wires an
+ * [addListener] callback to [AutonomyModeStore.resetToSafeDefault]; listeners are
+ * invoked synchronously inside the winning [trigger] so re-arming after a panic STOP
+ * can never silently resume in AUTO/BYPASS.
  */
-class KillSwitch(
-    /**
-     * Invoked once, synchronously, in the [trigger] call that actually flips the latch
-     * (never on idempotent re-triggers). Wired by the integration layer to revert the
-     * autonomy mode to [AutonomyMode.ASK]; defaults to a no-op so the no-arg
-     * `KillSwitch()` the DI graph constructs stays valid and tests need no callback.
-     */
-    private val onTrigger: ((KillReason) -> Unit)? = null
-) {
+class KillSwitch {
 
     private val _tripped = MutableStateFlow(false)
 
@@ -52,28 +43,20 @@ class KillSwitch(
     /** Optional one-shot listeners invoked synchronously on [trigger] (e.g. cancel gestures). */
     private val listeners = java.util.concurrent.CopyOnWriteArrayList<(KillReason) -> Unit>()
 
-    private val _lastReason = MutableStateFlow(KillReason.NONE)
-    /** Why the switch was last tripped, for the audit log and notification copy. */
-    val lastReason: StateFlow<KillReason> = _lastReason.asStateFlow()
-
     /** Synchronous, allocation-free read of the latch for the gesture hot path. */
     val isTripped: Boolean get() = _tripped.value
 
     /**
      * Fires the kill switch. Idempotent: triggering an already-tripped switch is a
-     * no-op (listeners are not re-invoked). Records [reason], reverts the autonomy mode
-     * to [AutonomyMode.ASK] via [onTrigger], and notifies listeners synchronously so a
-     * caller on the dispatch thread can abort immediately.
+     * no-op (listeners are not re-invoked). Notifies listeners synchronously — including
+     * the integration layer's revert to [AutonomyMode.ASK] — so a caller on the dispatch
+     * thread can abort immediately.
      *
      * @param reason what caused the stop (defaults to [KillReason.USER_STOP]).
      */
     fun trigger(reason: KillReason = KillReason.USER_STOP) {
         // Compare-and-set so concurrent triggers only fire listeners once.
         if (_tripped.compareAndSet(expect = false, update = true)) {
-            _lastReason.value = reason
-            // Drop the autonomy baseline to ASK so re-arming after a panic STOP can
-            // never silently resume in AUTO/BYPASS (AutonomyModeStore owns the persist).
-            runCatching { onTrigger?.invoke(reason) }
             for (l in listeners) {
                 runCatching { l(reason) }
             }
@@ -87,7 +70,6 @@ class KillSwitch(
      */
     fun reset() {
         _tripped.value = false
-        _lastReason.value = KillReason.NONE
     }
 
     /**
@@ -98,9 +80,6 @@ class KillSwitch(
         listeners.add(listener)
         return { listeners.remove(listener) }
     }
-
-    /** Removes every registered listener. Mainly for test isolation. */
-    fun clearListeners() = listeners.clear()
 }
 
 /** What caused the [KillSwitch] to trip — surfaced to the audit log / notification. */

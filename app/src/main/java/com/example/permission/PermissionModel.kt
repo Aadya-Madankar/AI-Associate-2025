@@ -29,10 +29,7 @@ enum class AutonomyMode {
     AUTO,
 
     /** Run everything except hard-blocked secure contexts + the forced-ask list. Opt-in only. */
-    BYPASS,
-
-    /** Emit the full ordered action list to a preview; execute NOTHING. (Claude `plan`.) */
-    PLAN
+    BYPASS
 }
 
 /**
@@ -46,7 +43,7 @@ enum class RiskTier {
     /** Always needs explicit confirmation (or a standing per-app/session grant). */
     GUARDED,
 
-    /** Hard-refused in ASK/ASK_LESS/AUTO/PLAN; only reachable in BYPASS after extra confirm. */
+    /** Hard-refused in ASK/ASK_LESS/AUTO; only reachable in BYPASS after extra confirm. */
     BLOCKED
 }
 
@@ -151,8 +148,5 @@ enum class RuleScope {
     SESSION,
 
     /** This action type + this app, persisted until revoked. */
-    ALWAYS_THIS_ACTION_AND_APP,
-
-    /** Any action in this app, for the session. */
-    THIS_APP_SESSION
+    ALWAYS_THIS_ACTION_AND_APP
 }

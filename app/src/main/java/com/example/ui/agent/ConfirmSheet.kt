@@ -508,5 +508,4 @@ private fun RuleScope.allowLabel(): String = when (this) {
     RuleScope.ONCE -> "Allow once"
     RuleScope.SESSION -> "Always allow (this session)"
     RuleScope.ALWAYS_THIS_ACTION_AND_APP -> "Always allow (this action + app)"
-    RuleScope.THIS_APP_SESSION -> "Always allow (this app, this session)"
 }

@@ -105,19 +105,6 @@ class DefaultSecureContextDetector : SecureContextDetector {
     }
 
     /**
-     * Verdict for an Android 14+ node whose `isAccessibilityDataSensitive` made it
-     * unreadable. Per §4.3 we treat "sensitive-looking + unreadable" as
-     * [SecureReason.SENSITIVE_HIDDEN_NODE] (never SAFE-because-empty). Returns NONE
-     * when there is nothing hidden.
-     *
-     * Retained for callers that hold the raw flag directly; the signal is now ALSO wired
-     * into [inspect] via [ScreenState.hasHiddenSensitiveNode], so the primary gate no
-     * longer depends on a separate call to this method.
-     */
-    fun inspectHidden(hasHiddenSensitiveNode: Boolean): SecureReason =
-        if (hasHiddenSensitiveNode) SecureReason.SENSITIVE_HIDDEN_NODE else SecureReason.NONE
-
-    /**
      * True if this element's editable target or any of its descriptive signals
      * (text / hint / content-description / resource-id) match the sensitive-field
      * regex. We only flag fields that are *editable or look like a value entry*, to

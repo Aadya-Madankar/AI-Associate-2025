@@ -8,8 +8,8 @@ import org.junit.Test
 /**
  * Focused unit tests for [RateLimiter] safety guards.
  *
- * Pure-logic target (atomic counters + a token bucket + a kotlinx StateFlow latch);
- * no android.* dependencies, so no Robolectric runner is required.
+ * Pure-logic target (atomic counters + a token bucket); no android.* dependencies, so
+ * no Robolectric runner is required.
  *
  * The clock is pinned so the token bucket never refills between calls — that isolates
  * the consecutive-irreversible cap and block counters from rate-limiting noise.
@@ -84,15 +84,9 @@ class RateLimiterTest {
         // First two blocks do not yet trip the fallback.
         assertFalse("1st block must not trip fallback", rl.onBlock())
         assertFalse("2nd block must not trip fallback", rl.onBlock())
-        assertFalse(rl.shouldFallbackToAsk())
-        assertFalse(rl.fallbackTriggered.value)
 
         // The 3rd consecutive block hits the threshold -> onBlock() returns true.
         assertTrue("3rd consecutive block must trip fallback", rl.onBlock())
-
-        // The latch is set and observable via both the method and the StateFlow.
-        assertTrue(rl.shouldFallbackToAsk())
-        assertTrue(rl.fallbackTriggered.value)
     }
 
     @Test
@@ -109,9 +103,7 @@ class RateLimiterTest {
         // ...so it now takes a fresh run of 3 to trip the fallback again.
         assertFalse("block after reset streak must not trip", rl.onBlock())
         assertFalse("2nd block in fresh streak must not trip", rl.onBlock())
-        assertFalse(rl.shouldFallbackToAsk())
         assertTrue("3rd block in fresh streak must trip", rl.onBlock())
-        assertTrue(rl.shouldFallbackToAsk())
     }
 
     @Test
@@ -127,13 +119,12 @@ class RateLimiterTest {
 
         // The 5th total block in the session trips the per-session fallback.
         assertTrue("5th per-session block must trip fallback", rl.onBlock())
-        assertTrue(rl.shouldFallbackToAsk())
     }
 
     // ---- 3. resetSession clears counters ----------------------------------------------
 
     @Test
-    fun resetSession_clearsAllCountersAndLowersFallbackLatch() {
+    fun resetSession_clearsAllCounters() {
         val rl = limiter(
             capacity = 4,
             maxConsecutiveIrreversible = 2,
@@ -149,22 +140,17 @@ class RateLimiterTest {
         rl.onBlock() // trips fallback
 
         val before = rl.snapshot()
-        assertTrue("precondition: fallback should be latched", before.fallbackTriggered)
         assertEquals(2, before.consecutiveIrreversible)
         assertEquals(3, before.consecutiveBlocks)
         assertEquals(3, before.sessionBlocks)
-        assertTrue(rl.shouldFallbackToAsk())
 
         rl.resetSession()
 
-        // Every counter is cleared, the latch is lowered, and the bucket is refilled.
+        // Every counter is cleared and the bucket is refilled.
         val after = rl.snapshot()
         assertEquals(0, after.consecutiveIrreversible)
         assertEquals(0, after.consecutiveBlocks)
         assertEquals(0, after.sessionBlocks)
-        assertFalse("fallback latch must be lowered after reset", after.fallbackTriggered)
-        assertFalse(rl.shouldFallbackToAsk())
-        assertFalse(rl.fallbackTriggered.value)
         assertEquals(4.0, after.tokens, 1e-9) // bucket refilled to capacity
 
         // The reset is functional: irreversible actions are allowed again from scratch.

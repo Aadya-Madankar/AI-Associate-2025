@@ -141,8 +141,8 @@ class ScreenReader(
 
     /**
      * True if the last [read], on API >= 34, encountered a node whose
-     * `isAccessibilityDataSensitive` made it unreadable. The service feeds this to
-     * [com.example.permission.DefaultSecureContextDetector.inspectHidden] to raise
+     * `isAccessibilityDataSensitive` made it unreadable. Fed into [ScreenState] so
+     * [com.example.permission.DefaultSecureContextDetector.inspect] can raise
      * [com.example.permission.SecureReason.SENSITIVE_HIDDEN_NODE], avoiding the
      * SAFE-because-empty trap where a screen that hides sensitive content from
      * accessibility looks merely empty. Always false on API < 34.

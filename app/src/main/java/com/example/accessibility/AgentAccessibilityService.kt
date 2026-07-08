@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import androidx.annotation.RequiresApi
 import com.example.permission.DenyLists
@@ -147,10 +146,16 @@ class AgentAccessibilityService : AccessibilityService(), AccessibilityControlle
 
     /**
      * Live secure-context flag for the active window. True when the foreground package is
-     * a denylisted banking/wallet/authenticator app, OR the foreground window carries
-     * [WindowManager.LayoutParams.FLAG_SECURE], OR the device is locked / showing the
+     * a denylisted banking/wallet/authenticator app, OR the device is locked / showing the
      * keyguard. Fail-secure: any framework error yields `true` so a screen we cannot
      * reliably inspect is treated as secure rather than leaked.
+     *
+     * NOTE: FLAG_SECURE itself is not probed here — the public
+     * [android.view.accessibility.AccessibilityWindowInfo] surface exposes no such
+     * accessor, and the hidden `getLayoutParamFlags()` reflective path is blocked by
+     * non-SDK restrictions on all real devices (always resolves to unknown). The
+     * denylist, keyguard, password-field, and sensitive-label signals carry the real
+     * secure-context load; see [DefaultSecureContextDetector].
      *
      * SECURITY: the denylist check is the read-boundary defense for the post-action
      * readScreen() done by Tap/Scroll/Swipe/LongPress/OpenNotifications tools. A tap that
@@ -162,86 +167,9 @@ class AgentAccessibilityService : AccessibilityService(), AccessibilityControlle
      * ScreenRedactor blank all element text wholesale before serialization.
      */
     private fun isSecureContext(): Boolean = try {
-        DenyLists.isDenylistedPackage(foregroundPackage) ||
-            activeWindowHasSecureFlag() ||
-            isKeyguardActive()
+        DenyLists.isDenylistedPackage(foregroundPackage) || isKeyguardActive()
     } catch (t: Throwable) {
         true
-    }
-
-    /**
-     * Inspect the live windows for [WindowManager.LayoutParams.FLAG_SECURE] on the
-     * active/focused window.
-     *
-     * The public [android.view.accessibility.AccessibilityWindowInfo] surface does not
-     * expose the window's layout flags, so we read them off-band via the framework's
-     * `getLayoutParamFlags()` (hidden) on the window info. We probe it defensively:
-     *  - flags read AND FLAG_SECURE set  -> secure (true).
-     *  - flags read AND FLAG_SECURE clear -> not secure (false).
-     *  - flags genuinely unreadable on this device (hidden API blocked) -> we cannot
-     *    use this signal; return false here and let the other secure-context signals
-     *    (keyguard, password field, denylist, sensitive labels) gate the screen.
-     *  - a window enumerated but throws while inspecting -> fail secure for THAT window.
-     *
-     * Returns true if any active/focused window is observed to be secure.
-     */
-    private fun activeWindowHasSecureFlag(): Boolean {
-        val activeWindows = try {
-            windows
-        } catch (t: Throwable) {
-            // We could not even enumerate the windows; fail secure.
-            return true
-        } ?: return false
-
-        for (window in activeWindows) {
-            if (window == null) continue
-            if (window.isActive || window.isFocused) {
-                when (inspectWindowSecureFlag(window)) {
-                    SecureFlag.SECURE -> return true
-                    SecureFlag.NOT_SECURE, SecureFlag.UNKNOWN -> Unit
-                }
-            }
-        }
-        return false
-    }
-
-    /** Result of probing a single window's FLAG_SECURE bit. */
-    private enum class SecureFlag { SECURE, NOT_SECURE, UNKNOWN }
-
-    /**
-     * Read [window]'s layout flags reflectively and report whether FLAG_SECURE is set.
-     * [SecureFlag.UNKNOWN] means the hidden accessor is unavailable/blocked on this
-     * device (a steady-state condition we do NOT treat as secure, to avoid blanking
-     * every normal screen); a window that throws while being inspected fails secure.
-     */
-    private fun inspectWindowSecureFlag(
-        window: android.view.accessibility.AccessibilityWindowInfo
-    ): SecureFlag {
-        val accessor = layoutParamFlagsAccessor ?: return SecureFlag.UNKNOWN
-        return try {
-            val flags = accessor.invoke(window) as? Int ?: return SecureFlag.UNKNOWN
-            if ((flags and WindowManager.LayoutParams.FLAG_SECURE) != 0) {
-                SecureFlag.SECURE
-            } else {
-                SecureFlag.NOT_SECURE
-            }
-        } catch (t: Throwable) {
-            // The accessor exists but failed on this specific window: fail secure.
-            SecureFlag.SECURE
-        }
-    }
-
-    /**
-     * Cached reflective handle to `AccessibilityWindowInfo.getLayoutParamFlags()` (hidden
-     * API). Resolved once; null when the method is absent/blocked on this device.
-     */
-    private val layoutParamFlagsAccessor: java.lang.reflect.Method? by lazy {
-        try {
-            android.view.accessibility.AccessibilityWindowInfo::class.java
-                .getMethod("getLayoutParamFlags")
-        } catch (t: Throwable) {
-            null
-        }
     }
 
     /** True when the device is locked / keyguard is showing. Fail-secure on error. */

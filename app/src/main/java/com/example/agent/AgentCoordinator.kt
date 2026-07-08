@@ -7,7 +7,6 @@ import com.example.accessibility.ScreenState
 import com.example.audit.AuditEntry
 import com.example.audit.AuditLog
 import com.example.audit.AuditOutcome
-import com.example.audit.ParamsHasher
 import com.example.di.ServiceLocator
 import com.example.live.LiveFunctionCall
 import com.example.live.LiveFunctionResponse
@@ -574,9 +573,8 @@ class AgentCoordinator(
                         mode = mode,
                         actionType = action.type.name,
                         targetApp = action.targetApp,
-                        // Mix the entry id into the hash so identical literals across entries
-                        // are unlinkable (ParamsHasher KDoc), never store raw params.
-                        paramsHash = ParamsHasher.hash(action.params + ("_entry" to UUID.randomUUID())),
+                        // ponytail: random id, not a hash — deterministic dedup needs the salt removed first anyway
+                        paramsHash = UUID.randomUUID().toString(),
                         decision = decision,
                         outcome = outcome
                     )

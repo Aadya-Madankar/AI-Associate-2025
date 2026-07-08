@@ -12,8 +12,8 @@ import kotlinx.coroutines.withContext
  *
  * Both operations are `suspend` and run on an IO dispatcher so disk access never blocks the
  * caller's thread (typically the agent loop / ViewModel main scope). Entity <-> contract
- * conversion is delegated to [AuditMappers]; raw literal params are never stored — only the
- * SHA-256 hash carried on [AuditEntry.paramsHash] (see [ParamsHasher]).
+ * conversion is delegated to [AuditMappers]; raw literal params are never stored — only a
+ * random per-entry id carried on [AuditEntry.paramsHash].
  *
  * @param dao the underlying DAO.
  * @param ioDispatcher dispatcher for the blocking Room calls; overridable for tests.

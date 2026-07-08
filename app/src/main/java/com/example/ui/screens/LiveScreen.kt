@@ -698,10 +698,9 @@ private fun modeMeta(mode: AutonomyMode): Pair<String, Color> = when (mode) {
     AutonomyMode.ASK_LESS -> "Ask less" to XenoWarm.DotAskLess
     AutonomyMode.AUTO -> "Auto" to XenoWarm.DotAuto
     AutonomyMode.BYPASS -> "Bypass" to XenoWarm.DotBypass
-    AutonomyMode.PLAN -> "Plan" to XenoWarm.DotPlan
 }
 
-/** Cycle through the four user-facing modes; Plan folds back to Ask. */
+/** Cycle through the four user-facing modes. */
 private fun nextMode(mode: AutonomyMode): AutonomyMode {
     val order = listOf(AutonomyMode.ASK, AutonomyMode.ASK_LESS, AutonomyMode.AUTO, AutonomyMode.BYPASS)
     val i = order.indexOf(mode)

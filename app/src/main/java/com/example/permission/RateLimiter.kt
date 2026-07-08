@@ -1,9 +1,5 @@
 package com.example.permission
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
 /**
  * Throttles the agent and arms the auto-fallback to the safe [AutonomyMode.ASK] mode.
  * Combines three independent guards (ARCHITECTURE.md §4.4), all reset per hands-free
@@ -17,8 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *     reversible action. Stops "send, send, send, send…" chains.
  *  3. **Auto-fallback counters** — [maxConsecutiveBlocks] consecutive blocks
  *     (default 3) OR [maxBlocksPerSession] total blocks per session (default 20) trips
- *     [shouldFallbackToAsk]. The owner observes [fallbackTriggered] and reverts the
- *     mode to ASK (via `AutonomyModeStore.resetToSafeDefault()`).
+ *     the fallback: [onBlock] returns true, and the caller reverts the mode to ASK
+ *     (via `AutonomyModeStore.resetToSafeDefault()`).
  *
  * Thread-safe: all counters are atomic / synchronized so the executor and the loop
  * controller can call from different coroutines.
@@ -54,10 +50,6 @@ class RateLimiter(
     private var consecutiveBlocks: Int = 0
     private var sessionBlocks: Int = 0
 
-    private val _fallbackTriggered = MutableStateFlow(false)
-    /** Latches true once a fallback threshold is hit; cleared on [resetSession]. */
-    val fallbackTriggered: StateFlow<Boolean> = _fallbackTriggered.asStateFlow()
-
     /**
      * Attempts to reserve budget for one action. Call this only after the
      * [PermissionEngine] has decided to Allow/Confirm-then-allow. Refunds nothing on
@@ -92,22 +84,14 @@ class RateLimiter(
 
     /**
      * Records a block (secure-context block, deny rule, or user denial). Bumps both the
-     * consecutive and per-session counters and trips the fallback latch if either
-     * threshold is reached. Returns true if this block triggered the fallback.
+     * consecutive and per-session counters. Returns true if either threshold was
+     * reached, meaning this block triggered the fallback.
      */
     fun onBlock(): Boolean = synchronized(lock) {
         val consec = ++consecutiveBlocks
         val session = ++sessionBlocks
-        val trip = consec >= maxConsecutiveBlocks || session >= maxBlocksPerSession
-        if (trip) _fallbackTriggered.value = true
-        return trip
+        return consec >= maxConsecutiveBlocks || session >= maxBlocksPerSession
     }
-
-    /**
-     * True once a fallback threshold has been crossed. The owner should switch the
-     * autonomy mode to [AutonomyMode.ASK] and may then [resetSession].
-     */
-    fun shouldFallbackToAsk(): Boolean = _fallbackTriggered.value
 
     /** Current counter snapshot, for surfacing in the audit/status UI. */
     fun snapshot(): Snapshot = synchronized(lock) {
@@ -116,15 +100,14 @@ class RateLimiter(
             tokens = tokens,
             consecutiveIrreversible = consecutiveIrreversible,
             consecutiveBlocks = consecutiveBlocks,
-            sessionBlocks = sessionBlocks,
-            fallbackTriggered = _fallbackTriggered.value
+            sessionBlocks = sessionBlocks
         )
     }
 
     /**
-     * Resets every per-session guard: refills the bucket, clears the irreversible streak
-     * and both block counters, and lowers the fallback latch. Call at the start of each
-     * hands-free session and after acting on a fallback (ARCHITECTURE.md §4.4).
+     * Resets every per-session guard: refills the bucket and clears the irreversible
+     * streak and both block counters. Call at the start of each hands-free session and
+     * after acting on a fallback (ARCHITECTURE.md §4.4).
      */
     fun resetSession() = synchronized(lock) {
         tokens = capacity.toDouble()
@@ -132,7 +115,6 @@ class RateLimiter(
         consecutiveIrreversible = 0
         consecutiveBlocks = 0
         sessionBlocks = 0
-        _fallbackTriggered.value = false
     }
 
     private fun refill() {
@@ -151,7 +133,6 @@ class RateLimiter(
         val tokens: Double,
         val consecutiveIrreversible: Int,
         val consecutiveBlocks: Int,
-        val sessionBlocks: Int,
-        val fallbackTriggered: Boolean
+        val sessionBlocks: Int
     )
 }
