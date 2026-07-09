@@ -160,9 +160,11 @@ internal fun NazimRenderer(
                 expression.update(dt)
                 faceMorph?.apply(engine, viseme.weights, expression.weights)
 
-                // 3) Subtle living head sway on the root node, scaled by idle energy.
+                // 3) Subtle living head sway on the root node, scaled by idle energy, plus a
+                //    forward lean while walking/running (the lean lives in the Hips channel we had
+                //    to drop when retargeting, so we re-add it here so the run doesn't read stiff).
                 val sway = expression.headSway()
-                applyHeadSway(childNodes, sway)
+                applyHeadSway(childNodes, sway, latestState[0])
             } catch (t: Throwable) {
                 onFailure(t)
             }
@@ -404,13 +406,20 @@ private fun resolveNazimFaceMorph(
     return null
 }
 
-/** Applies a gentle yaw/pitch/bob to the root model node for a "living" idle feel. */
+/** Applies a gentle yaw/pitch/bob to the root model node for a "living" idle feel, plus a
+ *  locomotion lean forward while [state] is walking/running. */
 private fun applyHeadSway(
     childNodes: List<Node>,
-    sway: Triple<Float, Float, Float>
+    sway: Triple<Float, Float, Float>,
+    state: NazimState
 ) {
     val root = childNodes.firstOrNull { it is ModelNode } ?: return
     val (yawDeg, pitchDeg, bob) = sway
-    root.rotation = Rotation(x = pitchDeg, y = MODEL_FACING_YAW + yawDeg, z = 0f)
+    val lean = when (state) {
+        NazimState.RUNNING -> 16f
+        NazimState.WALKING -> 6f
+        else -> 0f
+    }
+    root.rotation = Rotation(x = pitchDeg + lean, y = MODEL_FACING_YAW + yawDeg, z = 0f)
     root.position = Position(x = 0f, y = MODEL_BASE_Y + bob * 0.02f, z = 0f)
 }
