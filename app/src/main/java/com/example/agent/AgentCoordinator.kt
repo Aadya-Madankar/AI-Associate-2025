@@ -104,6 +104,11 @@ class AgentCoordinator(
     private val auditLog: AuditLog = ServiceLocator.auditLog
     private val autonomyModeStore: AutonomyModeStore = ServiceLocator.autonomyModeStore
     private val ruleStore = ServiceLocator.ruleStore
+    private val memory = ServiceLocator.memoryStore
+
+    /** The episode ([com.example.memory.MemoryStore]) currently being recorded, or "" if none. */
+    @Volatile
+    private var currentEpisodeId: String = ""
 
     // --- Public UI state -------------------------------------------------------------
 
@@ -252,7 +257,8 @@ class AgentCoordinator(
         // --- task_complete is a control signal: end the loop, reset per-task guards. ---
         if (action.type == com.example.permission.ActionType.TASK_COMPLETE) {
             val result = runExecutor(callId, toolName, call.args.orEmpty())
-            finishTask()
+            val completed = result as? ToolResult.Completed
+            finishTask(success = completed?.success ?: true, summary = completed?.summary.orEmpty())
             return result.toFunctionResponse()
         }
 
@@ -289,7 +295,7 @@ class AgentCoordinator(
             is StepVerdict.Cancelled ->
                 return errorResponse(callId, toolName, "Action cancelled.")
             is StepVerdict.StepCapReached -> {
-                finishTask()
+                finishTask(success = false, summary = "Reached the step limit before finishing.")
                 return errorResponse(
                     callId, toolName,
                     "Reached the ${verdict.maxSteps}-step limit; stopping the task. " +
@@ -325,7 +331,7 @@ class AgentCoordinator(
 
             is PermissionDecision.Block -> {
                 onBlocked()
-                audit(action, mode, "Block", AuditOutcome.BLOCKED)
+                audit(action, mode, "Block", AuditOutcome.BLOCKED, toolName)
                 errorResponse(callId, toolName, decision.message)
             }
 
@@ -347,7 +353,7 @@ class AgentCoordinator(
                     executeAllowed(callId, toolName, action, mode, "User confirmed.", confirmed = true)
                 } else {
                     onBlocked()
-                    audit(action, mode, "Confirm", AuditOutcome.DENIED_BY_USER)
+                    audit(action, mode, "Confirm", AuditOutcome.DENIED_BY_USER, toolName)
                     errorResponse(callId, toolName, "The user declined this action.")
                 }
             }
@@ -368,7 +374,7 @@ class AgentCoordinator(
     ): LiveFunctionResponse {
         val budget = rateLimiter.tryConsume(irreversible = !action.reversible)
         if (!budget.allowed) {
-            audit(action, mode, "Allow", AuditOutcome.BLOCKED)
+            audit(action, mode, "Allow", AuditOutcome.BLOCKED, toolName)
             val why = when (budget.rejection) {
                 RateLimiter.Rejection.RATE_LIMITED ->
                     "Slow down — too many actions in a short time. Wait a moment and retry."
@@ -385,7 +391,7 @@ class AgentCoordinator(
         // never audit/return this as an allowed success — fail closed even if the dispatch job
         // happened to finish before its cancellation landed.
         if (killSwitch.isTripped) {
-            audit(action, mode, if (confirmed) "Confirm" else "Allow", AuditOutcome.BLOCKED)
+            audit(action, mode, if (confirmed) "Confirm" else "Allow", AuditOutcome.BLOCKED, toolName)
             return errorResponse(
                 callId, toolName,
                 "Stopped: the agent kill switch is active. Re-arm before continuing."
@@ -395,7 +401,7 @@ class AgentCoordinator(
             is ToolResult.Failure -> AuditOutcome.FAILED
             else -> if (confirmed) AuditOutcome.ALLOWED_CONFIRMED else AuditOutcome.ALLOWED_AUTO
         }
-        audit(action, mode, if (confirmed) "Confirm" else "Allow", outcome)
+        audit(action, mode, if (confirmed) "Confirm" else "Allow", outcome, toolName)
         return result.toFunctionResponse()
     }
 
@@ -495,6 +501,16 @@ class AgentCoordinator(
     private suspend fun currentMode(): AutonomyMode =
         runCatching { autonomyModeStore.current() }.getOrDefault(autonomyMode.value)
 
+    /**
+     * Record a typed user turn into the current episode (episodic memory). No-op when no session
+     * is open. Fire-and-forget: memory never blocks the UI.
+     */
+    fun noteUserUtterance(text: String) {
+        val episodeId = currentEpisodeId
+        if (episodeId.isEmpty()) return
+        scope.launch { runCatching { memory.recordUtterance(episodeId, fromUser = true, text = text) } }
+    }
+
     // --- Session / task lifecycle ----------------------------------------------------
 
     /**
@@ -507,16 +523,28 @@ class AgentCoordinator(
         rateLimiter.resetSession()
         if (killSwitch.isTripped) killSwitch.reset()
         _agentStatus.value = AgentStatus(active = true, currentStep = "", stepCount = 0)
+        // Open a fresh episodic-memory chapter for this session (auto-captures actions as XENO
+        // acts). The id is generated synchronously so currentEpisodeId is valid immediately (no
+        // race against early events); the DB write is fire-and-forget — memory never blocks the loop.
+        val episodeId = UUID.randomUUID().toString()
+        currentEpisodeId = episodeId
+        scope.launch { runCatching { memory.beginEpisode(episodeId) } }
     }
 
     /**
      * Mark the current task finished (via `task_complete`, the step cap, or a cancel). Clears
      * the active flag; leaves the loop controller's counters until [beginTask] resets them.
+     * Closes the episodic-memory chapter with its outcome + summary.
      */
-    fun finishTask() {
+    fun finishTask(success: Boolean = true, summary: String = "") {
         _agentStatus.value = _agentStatus.value.copy(active = false)
         // Drop any session allow rules so the next task starts from a clean slate.
         runCatching { ruleStore.revokeSession() }
+        val episodeId = currentEpisodeId
+        currentEpisodeId = ""
+        if (episodeId.isNotEmpty()) {
+            scope.launch { runCatching { memory.endEpisode(episodeId, success, summary) } }
+        }
     }
 
     private fun onKillSwitchTripped(reason: KillReason) {
@@ -603,7 +631,8 @@ class AgentCoordinator(
         action: AgentAction,
         mode: AutonomyMode,
         decision: String,
-        outcome: AuditOutcome
+        outcome: AuditOutcome,
+        toolName: String
     ) {
         scope.launch {
             runCatching {
@@ -621,6 +650,15 @@ class AgentCoordinator(
                     )
                 )
             }.onFailure { Log.w(TAG, "Audit write failed: ${it.message}") }
+            // Episodic capture: the same seam records what XENO did into long-term memory. Uses
+            // the action's human description (no raw params/secrets), mirroring the audit privacy
+            // rule. Pure screen reads are filtered inside the store as noise.
+            val episodeId = currentEpisodeId
+            if (episodeId.isNotEmpty()) {
+                runCatching {
+                    memory.recordEvent(episodeId, toolName, action.targetApp, action.description, outcome.name)
+                }
+            }
         }
     }
 

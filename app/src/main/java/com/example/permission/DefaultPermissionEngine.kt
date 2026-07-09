@@ -5,7 +5,7 @@ import com.example.accessibility.UiElement
 import com.example.security.SensitivePatterns
 
 /**
- * Default [PermissionEngine] implementing the Claude-Code-style four-layer, first-match
+ * Default [PermissionEngine] implementing the assistant-style four-layer, first-match
  * decision from ARCHITECTURE.md §4.2. The autonomy [AutonomyMode] only sets a baseline;
  * the denylist, the forced-ask list, and the secure-context block apply in **every**
  * mode, including [AutonomyMode.BYPASS].

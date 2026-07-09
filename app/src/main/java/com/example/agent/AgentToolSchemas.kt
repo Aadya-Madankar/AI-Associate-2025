@@ -35,6 +35,10 @@ object AgentToolSchemas {
     const val RECALL_SKILL = "recall_skill"
     const val LIST_SKILLS = "list_skills"
     const val EDIT_SELF_PROMPT = "update_self_prompt"
+    const val REMEMBER = "remember"
+    const val RECALL_MEMORY = "recall"
+    const val NOTE_INTENTION = "note_intention"
+    const val FORGET = "forget"
     const val TASK_COMPLETE = com.example.agent.TASK_COMPLETE
 
     // --- Parameter schema for the one synthetic tool with no AgentTool instance ----------

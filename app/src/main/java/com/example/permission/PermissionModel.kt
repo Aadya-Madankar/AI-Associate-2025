@@ -15,14 +15,14 @@ package com.example.permission
  */
 
 /**
- * How autonomous the agent is allowed to be, mirroring Claude Code's permission
+ * How autonomous the agent is allowed to be, mirroring a modern AI assistant's permission
  * modes. Persisted in DataStore and surfaced as a mode pill in the UI.
  */
 enum class AutonomyMode {
     /** Read freely, but confirm EVERY action with a preview sheet. The safe default. */
     ASK,
 
-    /** Auto-run a fixed SAFE whitelist; confirm everything else. (Claude `acceptEdits`.) */
+    /** Auto-run a fixed SAFE whitelist; confirm everything else. (`acceptEdits`-style.) */
     ASK_LESS,
 
     /** Run SAFE actions without prompts; GUARDED actions go to the classifier. */
@@ -76,6 +76,9 @@ enum class ActionType {
 
     // --- XENO's self-authored prompt note (SAFE: local DataStore only, reversible) ---
     EDIT_SELF_PROMPT,
+
+    // --- On-device long-term memory (SAFE: local Room DB only, reversible) ---
+    REMEMBER_FACT, RECALL_MEMORY, NOTE_INTENTION, FORGET_MEMORY,
 
     /** Anything the model asked for that we don't recognize → treated as GUARDED. */
     UNKNOWN

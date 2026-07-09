@@ -10,6 +10,7 @@ import com.example.agent.ToolRegistry
 import com.example.agent.ToolResult
 import com.example.audit.AuditLog
 import com.example.audit.RoomAuditLog
+import com.example.memory.MemoryStore
 import com.example.permission.AutonomyModeStore
 import com.example.permission.DataStoreRuleStore
 import com.example.permission.DefaultPermissionEngine
@@ -90,6 +91,7 @@ object ServiceLocator {
     @Volatile private var _permissionEngine: PermissionEngine? = null
     @Volatile private var _rateLimiter: RateLimiter? = null
     @Volatile private var _auditLog: AuditLog? = null
+    @Volatile private var _memoryStore: MemoryStore? = null
     @Volatile private var _screenRedactor: ScreenRedactor? = null
     @Volatile private var _toolRegistry: ToolRegistry? = null
     @Volatile private var _phoneControlExecutor: PhoneControlExecutor? = null
@@ -217,6 +219,17 @@ object ServiceLocator {
     val auditLog: AuditLog
         @Synchronized get() = _auditLog
             ?: RoomAuditLog.create(requireContext()).also { _auditLog = it }
+
+    /**
+     * XENO's on-device long-term memory ([MemoryStore] over the process-wide
+     * [com.example.memory.MemoryDatabase]): episodic (auto-captured actions/turns), semantic
+     * (facts), and prospective (intentions). The coordinator opens/closes episodes and records
+     * events; the ViewModel folds the boot context into the system instruction at connect; the
+     * memory tools read/write it. Unlike [auditLog] this holds real, recallable user memory.
+     */
+    val memoryStore: MemoryStore
+        @Synchronized get() = _memoryStore
+            ?: MemoryStore(requireContext()).also { _memoryStore = it }
 
     /**
      * On-device PII redactor that drops password/OTP/CVV/IBAN-shaped strings and

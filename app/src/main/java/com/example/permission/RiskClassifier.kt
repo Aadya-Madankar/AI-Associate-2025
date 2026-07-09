@@ -98,6 +98,14 @@ class RiskClassifier {
         // reversible (overwrite/clear), nothing leaves the device → SAFE.
         ActionType.EDIT_SELF_PROMPT to RiskTier.SAFE,
 
+        // On-device long-term memory: read/write a local Room DB in the app's private storage.
+        // Nothing leaves the trust boundary; writes are reversible (forget soft-deletes, remember
+        // upserts). RECALL only returns stored text → SAFE, like the skill-memory tools.
+        ActionType.REMEMBER_FACT to RiskTier.SAFE,
+        ActionType.RECALL_MEMORY to RiskTier.SAFE,
+        ActionType.NOTE_INTENTION to RiskTier.SAFE,
+        ActionType.FORGET_MEMORY to RiskTier.SAFE,
+
         // --- GUARDED: irreversible / outbound / special-access ---
         ActionType.PLACE_CALL to RiskTier.GUARDED,
         ActionType.SEND_MESSAGE to RiskTier.GUARDED,

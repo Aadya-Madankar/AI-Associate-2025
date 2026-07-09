@@ -191,7 +191,12 @@ class GeminiToolMapper(moshi: Moshi = defaultMoshi()) {
             AgentToolSchemas.RECALL_SKILL to ActionType.RECALL_SKILL,
             AgentToolSchemas.LIST_SKILLS to ActionType.LIST_SKILLS,
             // XENO's self-authored prompt note (SAFE, local DataStore only).
-            AgentToolSchemas.EDIT_SELF_PROMPT to ActionType.EDIT_SELF_PROMPT
+            AgentToolSchemas.EDIT_SELF_PROMPT to ActionType.EDIT_SELF_PROMPT,
+            // On-device long-term memory (SAFE, reversible — local Room DB only).
+            AgentToolSchemas.REMEMBER to ActionType.REMEMBER_FACT,
+            AgentToolSchemas.RECALL_MEMORY to ActionType.RECALL_MEMORY,
+            AgentToolSchemas.NOTE_INTENTION to ActionType.NOTE_INTENTION,
+            AgentToolSchemas.FORGET to ActionType.FORGET_MEMORY
         )
 
         /**

@@ -33,6 +33,11 @@ import com.example.agent.tools.UpdateSelfPromptTool
 import com.example.agent.tools.WebSearchTool
 import com.example.agent.tools.WifiPanelTool
 import com.example.config.PersonaStore
+import com.example.memory.MemoryStore
+import com.example.memory.tools.ForgetMemoryTool
+import com.example.memory.tools.NoteIntentionTool
+import com.example.memory.tools.RecallMemoryTool
+import com.example.memory.tools.RememberFactTool
 import com.example.skill.JsonFileSkillStore
 import com.example.skill.Skill
 import com.example.skill.SkillStore
@@ -70,10 +75,17 @@ class ToolRegistry(context: Context) {
     private val skillStore: SkillStore = JsonFileSkillStore(appContext)
 
     /**
+     * The one on-device long-term memory facade, shared by the remember/recall/note/forget tools.
+     * Wraps the process-wide [com.example.memory.MemoryDatabase]; the coordinator/ViewModel use
+     * their own facade over the same DB, so this second instance shares all state.
+     */
+    private val memoryStore: MemoryStore = MemoryStore(appContext)
+
+    /**
      * Immutable name → tool map. Built eagerly so [declarations] and [byName] are cheap and
      * thread-safe to read from the WebSocket reader thread and the agent coroutine alike.
      */
-    private val tools: Map<String, AgentTool> = buildTools(appContext, skillStore)
+    private val tools: Map<String, AgentTool> = buildTools(appContext, skillStore, memoryStore)
         .associateBy { it.declaration.name }
 
     /** Look up a tool by its declared name, or `null` if no such tool is registered. */
@@ -140,7 +152,11 @@ class ToolRegistry(context: Context) {
          * registry's shared [skillStore] so save/list/recall and the skill-as-tool advertising
          * all operate on the same `nazim_skills.json` file.
          */
-        private fun buildTools(context: Context, skillStore: SkillStore): List<AgentTool> {
+        private fun buildTools(
+            context: Context,
+            skillStore: SkillStore,
+            memoryStore: MemoryStore
+        ): List<AgentTool> {
             return listOf(
                 // Read + act on the current screen.
                 GetScreenTool(),
@@ -178,11 +194,16 @@ class ToolRegistry(context: Context) {
                 ShareTool(context),
                 // Screen capture (a11y takeScreenshot, API 30+)
                 TakeScreenshotTool(),
-                // On-device memory + self-authored prompt.
+                // On-device skill memory + self-authored prompt.
                 SaveSkillTool(skillStore),
                 ListSkillsTool(skillStore),
                 RecallSkillTool(skillStore),
-                UpdateSelfPromptTool(PersonaStore(context))
+                UpdateSelfPromptTool(PersonaStore(context)),
+                // On-device long-term memory (episodic/semantic/prospective).
+                RememberFactTool(memoryStore),
+                RecallMemoryTool(memoryStore),
+                NoteIntentionTool(memoryStore),
+                ForgetMemoryTool(memoryStore)
             )
         }
     }
