@@ -48,14 +48,6 @@ class BluetoothSettingsTool(context: Context) : AgentTool {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
 
-            if (intent.resolveActivity(appContext.packageManager) == null) {
-                return@withContext ToolResult.Failure(
-                    toolName = declaration.name,
-                    callId = callId,
-                    error = "No Bluetooth settings screen is available on this device."
-                )
-            }
-
             try {
                 appContext.startActivity(intent)
                 ToolResult.Success(
@@ -68,7 +60,7 @@ class BluetoothSettingsTool(context: Context) : AgentTool {
                 ToolResult.Failure(
                     toolName = declaration.name,
                     callId = callId,
-                    error = "Could not open Bluetooth settings: ${e.message ?: "no handler"}."
+                    error = "No Bluetooth settings screen is available on this device."
                 )
             }
         }

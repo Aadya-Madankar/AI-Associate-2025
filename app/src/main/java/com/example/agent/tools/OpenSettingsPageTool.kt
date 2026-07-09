@@ -1,5 +1,6 @@
 package com.example.agent.tools
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -95,15 +96,12 @@ class OpenSettingsPageTool(private val context: Context) : AgentTool {
         if (action == Settings.ACTION_APP_NOTIFICATION_SETTINGS) {
             intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
         }
-        if (intent.resolveActivity(context.packageManager) == null) {
-            return ToolResult.Failure(declaration.name, callId, "This device has no '$key' settings page.")
-        }
 
-        return runCatching {
+        return try {
             context.startActivity(intent)
             ToolResult.Success(declaration.name, callId, "Opened the $key settings page.", data = mapOf("page" to key))
-        }.getOrElse {
-            ToolResult.Failure(declaration.name, callId, "Could not open settings: ${it.message}")
+        } catch (e: ActivityNotFoundException) {
+            ToolResult.Failure(declaration.name, callId, "This device has no '$key' settings page.")
         }
     }
 }

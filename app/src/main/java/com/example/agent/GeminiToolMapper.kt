@@ -1,5 +1,6 @@
 package com.example.agent
 
+import com.example.agent.tools.ToolArgs
 import com.example.live.LiveFunctionCall
 import com.example.live.LiveFunctionDeclaration
 import com.example.live.LiveTool
@@ -129,7 +130,7 @@ class GeminiToolMapper(moshi: Moshi = defaultMoshi()) {
         ActionType.OPEN_APP -> "Open ${args["package"] ?: args["appName"] ?: "an app"}"
         ActionType.OPEN_URL -> "Open ${args["url"] ?: "a URL"}"
         ActionType.WEB_SEARCH -> "Search the web for \"${args["query"] ?: ""}\""
-        ActionType.TORCH -> "Turn the flashlight ${if (args["on"] == true) "on" else "off"}"
+        ActionType.TORCH -> "Turn the flashlight ${if (ToolArgs.boolArg(args, "on") == true) "on" else "off"}"
         ActionType.TAP -> "Tap element ${args["index"] ?: "?"}"
         ActionType.INPUT_TEXT -> "Type into element ${args["index"] ?: "?"}"
         ActionType.TASK_COMPLETE -> "Finish the task"

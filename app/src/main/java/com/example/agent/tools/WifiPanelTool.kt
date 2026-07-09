@@ -55,14 +55,6 @@ class WifiPanelTool(context: Context) : AgentTool {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
 
-            if (intent.resolveActivity(appContext.packageManager) == null) {
-                return@withContext ToolResult.Failure(
-                    toolName = declaration.name,
-                    callId = callId,
-                    error = "No Wi-Fi settings screen is available on this device."
-                )
-            }
-
             try {
                 appContext.startActivity(intent)
                 ToolResult.Success(
@@ -75,7 +67,7 @@ class WifiPanelTool(context: Context) : AgentTool {
                 ToolResult.Failure(
                     toolName = declaration.name,
                     callId = callId,
-                    error = "Could not open the Wi-Fi panel: ${e.message ?: "no handler"}."
+                    error = "No Wi-Fi settings screen is available on this device."
                 )
             }
         }

@@ -1,5 +1,6 @@
 package com.example.agent.tools
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -41,19 +42,16 @@ class DialPrefillTool(private val context: Context) : AgentTool {
         // tel: requires the raw number be URL-encoded so '+', '#', '*' survive.
         val intent = Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (intent.resolveActivity(context.packageManager) == null) {
-            return ToolResult.Failure(declaration.name, callId, "No dialer app available.")
-        }
 
-        return runCatching {
+        return try {
             context.startActivity(intent)
             ToolResult.Success(
                 declaration.name, callId,
                 "Dialer ready with $number. Press call to connect.",
                 data = mapOf("number" to number)
             )
-        }.getOrElse {
-            ToolResult.Failure(declaration.name, callId, "Could not open dialer: ${it.message}")
+        } catch (e: ActivityNotFoundException) {
+            ToolResult.Failure(declaration.name, callId, "No dialer app available.")
         }
     }
 }
