@@ -111,7 +111,8 @@ class XenoOverlayService : Service(),
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        sizePx = (168 * resources.displayMetrics.density).toInt()
+        val dm = resources.displayMetrics
+        sizePx = (168 * dm.density).toInt()
 
         val composeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@XenoOverlayService)
@@ -140,8 +141,10 @@ class XenoOverlayService : Service(),
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (24 * resources.displayMetrics.density).toInt()
-            y = (260 * resources.displayMetrics.density).toInt()
+            // Spawn where the in-app avatar was standing (top-center) so it reads as the SAME
+            // character stepping out of the app; it then walks to its resting corner below.
+            x = dm.widthPixels / 2 - sizePx / 2
+            y = (96 * dm.density).toInt()
         }
 
         try {
@@ -149,6 +152,12 @@ class XenoOverlayService : Service(),
         } catch (t: Throwable) {
             stopSelf(); return
         }
+
+        // Walk from the spawn point to the resting corner — the walk carries the continuity a
+        // hard size-cut across two SurfaceViews can't (walkTo takes tap-CENTER coordinates).
+        val restCx = (24 * dm.density).toInt() + sizePx / 2
+        val restCy = (260 * dm.density).toInt() + sizePx / 2
+        scope.launch { delay(150); walkTo(restCx, restCy) }
 
         // Mirror the live session into the avatar whenever it is not mid-walk.
         scope.launch {

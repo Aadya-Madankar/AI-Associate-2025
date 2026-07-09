@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -140,12 +141,17 @@ fun LiveScreen(viewModel: XenoViewModel) {
         )
 
         // 2) XENO — the presence at the top (3D GLB; transparent scene over the warm wash).
+        //    While roaming, the character has "left" the app to roam your screen as the floating
+        //    overlay, so only ONE character is visible. We move the 3D view OFF-SCREEN rather than
+        //    removing it: disposing the SceneView mid-session use-after-frees in libgltfio and
+        //    segfaults, so the engine must stay alive (off-screen) until roaming ends.
         NazimView(
             state = NazimState.from(companionState, agentStatus.active),
             amplitude = amplitude,
             persona = persona,
             modifier = Modifier
                 .align(Alignment.TopCenter)
+                .offset(y = if (roamEnabled) (-420).dp else 0.dp)
                 .fillMaxWidth()
                 .padding(top = 36.dp)
                 .height(320.dp)
