@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -138,7 +139,7 @@ fun LiveScreen(viewModel: XenoViewModel) {
             modifier = Modifier.fillMaxSize()
         )
 
-        // 2) XENO — the centered presence (3D GLB; transparent scene over the warm wash).
+        // 2) XENO — the presence at the top (3D GLB; transparent scene over the warm wash).
         NazimView(
             state = NazimState.from(companionState, agentStatus.active),
             amplitude = amplitude,
@@ -147,72 +148,52 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .padding(top = 36.dp)
-                .height(440.dp)
+                .height(320.dp)
         )
 
-        // 3) Top bar: XENO glyph (left) + frosted icon buttons (right).
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            XenoGlyph()
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GlassIconButton(Icons.Rounded.Settings, "Settings") { showSettings = true }
-                GlassIconButton(Icons.Rounded.People, "Companion") { showPersonaSwitcher = true }
-            }
-        }
-
-        // 4) Center copy: the friendly prompt, sitting just under XENO.
+        // 3) Foreground — ONE vertical flow (avatar headroom → prompt → flexible gap →
+        //    transcript → status chips → vision → mic → caption). A single Column means
+        //    these never overlap regardless of which pieces are visible.
         Column(
             modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp)
-                .padding(top = 132.dp),
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Headroom so the copy sits just under XENO, never on top of it.
+            Spacer(Modifier.height(348.dp))
+
             ModeChip(mode = autonomyMode, onCycle = viewModel::setAutonomyMode)
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(18.dp))
             Text(
                 text = promptFor(companionState),
                 color = XenoWarm.TextPrimary,
                 textAlign = TextAlign.Center,
-                fontSize = 26.sp,
-                lineHeight = 33.sp,
+                fontSize = 24.sp,
+                lineHeight = 31.sp,
                 fontWeight = FontWeight.Medium
             )
-        }
 
-        // 5) Transcript — a quiet light band above the controls (only when there's real dialog).
-        TranscriptBand(
-            messages = messages,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 30.dp)
-                .padding(bottom = 248.dp)
-                .height(196.dp)
-        )
+            // Flexible gap — pushes the transcript + controls to the bottom.
+            Spacer(Modifier.weight(1f))
 
-        // 6) Bottom controls.
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+            // Transcript — a quiet band above the controls (only when there's real dialog).
+            TranscriptBand(
+                messages = messages,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 188.dp)
+                    .padding(horizontal = 6.dp)
+                    .padding(bottom = 10.dp)
+            )
+
             // Control-access nudge — the accessibility service must be ON for XENO to tap/type/
             // scroll. Opening apps now works regardless, but full control needs this grant.
             AnimatedVisibility(visible = !a11yEnabled) {
                 AccessibilityChip(
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
                 ) {
                     runCatching {
                         context.startActivity(
@@ -227,7 +208,7 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 InfoChip(
                     text = "Add a Gemini API key to start — tap the settings icon.",
                     tint = XenoWarm.Warning,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
                 )
             }
 
@@ -239,7 +220,7 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 ErrorChip(
                     message = errorMessage.orEmpty(),
                     onDismiss = viewModel::clearError,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
                 )
             }
 
@@ -248,9 +229,11 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 InfoChip(
                     text = agentStatus.currentStep,
                     tint = XenoWarm.TextSecondary,
-                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
                 )
             }
+
+            Spacer(Modifier.height(6.dp))
 
             // Vision + roam — small, quiet warm chips.
             Row(
@@ -292,6 +275,24 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 color = XenoWarm.TextSecondary,
                 fontSize = 13.sp
             )
+            Spacer(Modifier.height(26.dp))
+        }
+
+        // 4) Top bar (drawn last so its icon buttons stay on top and tappable).
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            XenoGlyph()
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassIconButton(Icons.Rounded.Settings, "Settings") { showSettings = true }
+                GlassIconButton(Icons.Rounded.People, "Companion") { showPersonaSwitcher = true }
+            }
         }
 
         // -- Modal sheets / overlays (kept) --
