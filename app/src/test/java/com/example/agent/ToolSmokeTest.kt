@@ -48,6 +48,11 @@ class ToolSmokeTest {
         )
         "recall_skill" -> mapOf("name" to "smoke skill")
         "update_self_prompt" -> mapOf("directive" to "be concise")
+        // Long-term memory tools.
+        "remember" -> mapOf("text" to "the user likes tea")
+        "recall" -> mapOf("query" to "tea")
+        "note_intention" -> mapOf("text" to "remind me to call mom")
+        "forget" -> mapOf("ref" to "1")
         // get_screen, press_back, press_home, press_recents, open_notifications,
         // take_screenshot, media_play_pause, open_wifi_panel, open_bluetooth_settings,
         // list_skills all take no required arguments.
@@ -58,7 +63,7 @@ class ToolSmokeTest {
     fun every_registered_tool_executes_without_throwing() = runTest {
         val registry = ToolRegistry(ApplicationProvider.getApplicationContext())
         val names = registry.declarations().map { it.name }.filter { it != TASK_COMPLETE }
-        assertEquals(34, names.size)
+        assertEquals(38, names.size) // 34 base tools + 4 long-term-memory tools
 
         for (name in names) {
             val tool = registry.byName(name)
