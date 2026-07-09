@@ -10,6 +10,7 @@ import com.google.android.filament.gltfio.Animator
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.rememberEngine
@@ -23,10 +24,15 @@ private const val TAG = "NazimRenderer"
 private const val CROSS_FADE_SECONDS = 0.35f
 
 /**
- * Base yaw (degrees) so the rigged figure faces the user. glTF humanoids commonly export
- * facing +Z (away from the camera); 180° turns them to front. Head-sway is applied on top.
+ * Framing constants for the bundled `nazim.glb`. This Sketchfab/FBX rig reports a misleading
+ * bind-pose bounding box (skinning re-inflates it at runtime), so SceneView's `scaleToUnits`
+ * over-scales it. We bypass that and place the model explicitly: a uniform scale + a base Y so
+ * the standing figure sits centered, and a base yaw so it faces the user. Head-sway is applied
+ * on top of the base yaw/Y each frame. Retune these three if a different GLB is dropped in.
  */
-private const val MODEL_FACING_YAW = 180f
+private const val MODEL_SCALE = 0.29f
+private const val MODEL_BASE_Y = -0.17f
+private const val MODEL_FACING_YAW = 0f
 
 /**
  * The SceneView/Filament-backed renderer for the **Nazim** MetaHuman.
@@ -96,12 +102,11 @@ internal fun NazimRenderer(
             val modelInstance = modelLoader.createModelInstance(NazimAssets.MODEL_PATH)
             val modelNode = ModelNode(
                 modelInstance = modelInstance,
-                autoAnimate = false,
-                // Frame the whole standing figure with headroom (a tall humanoid overflows the
-                // default camera). Tuned so head-to-feet sits centered with margin.
-                scaleToUnits = 0.34f,
-                centerOrigin = Position(0f, 0f, 0f)
+                autoAnimate = false
+                // No scaleToUnits: this rig's bind-pose bbox is unreliable (see the framing
+                // constants above). We size/place it explicitly below instead.
             )
+            modelNode.scale = Scale(MODEL_SCALE)
             add(modelNode)
         } catch (t: Throwable) {
             loadError[0] = t
@@ -407,6 +412,5 @@ private fun applyHeadSway(
     val root = childNodes.firstOrNull { it is ModelNode } ?: return
     val (yawDeg, pitchDeg, bob) = sway
     root.rotation = Rotation(x = pitchDeg, y = MODEL_FACING_YAW + yawDeg, z = 0f)
-    val pos = root.position
-    root.position = Position(x = pos.x, y = bob * 0.02f, z = pos.z)
+    root.position = Position(x = 0f, y = MODEL_BASE_Y + bob * 0.02f, z = 0f)
 }

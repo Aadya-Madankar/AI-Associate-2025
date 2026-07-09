@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# Raw avatar-source downloads (the app asset lives in app/src/main/assets/nazim.glb)
+/assets/*.zip
+/assets/*.crdownload
+/assets/gavin_reed_-_detroit_become_human.glb
