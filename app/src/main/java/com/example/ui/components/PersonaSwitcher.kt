@@ -284,7 +284,7 @@ private fun PersonaAvatar(
         ) {
             Text(
                 text = label,
-                color = XenoWarm.TextOnDark,
+                color = XenoWarm.TextPrimary,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )

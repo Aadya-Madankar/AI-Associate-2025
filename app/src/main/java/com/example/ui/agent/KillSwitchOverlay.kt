@@ -190,7 +190,7 @@ private fun Modifier.stopPillGlass(stop: Color, breath: () -> Float): Modifier =
             drawRoundRect(brush = sheen, cornerRadius = CornerRadius(pillR))
             // Brighter lit top edge — a hairline of light.
             drawRoundRect(
-                color = XenoWarm.Hairline,
+                color = XenoWarm.Sheen,
                 cornerRadius = CornerRadius(pillR),
                 style = Stroke(width = 2f)
             )
