@@ -270,12 +270,8 @@ fun LiveScreen(viewModel: XenoViewModel) {
                     selected = visionState == VisionState.SCREEN,
                     onClick = viewModel::requestScreenShare
                 )
-                ToggleChip(
-                    icon = Icons.Rounded.DirectionsWalk,
-                    label = "Roam",
-                    selected = roamEnabled,
-                    onClick = viewModel::toggleRoam
-                )
+                // No manual Roam chip: XENO leaves the app to roam on its own whenever it is
+                // operating the phone for you, and returns when the task is done.
             }
 
             Spacer(Modifier.height(18.dp))

@@ -31,6 +31,8 @@ import com.example.overlay.OverlayBus
 import com.example.character.NazimState
 import com.example.voice.VoiceService
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -221,7 +223,37 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _amplitude.collect { OverlayBus.setAmplitude(it) }
         }
+
+        // Autonomous roam: XENO leaves the app to roam your screen exactly while it is operating
+        // the phone (an agent task is running) and returns when the task finishes — no manual
+        // toggle. If it has no overlay grant yet, it asks once, the first time it needs to leave.
+        viewModelScope.launch {
+            agentStatus
+                .map { it.active }
+                .distinctUntilChanged()
+                .collect { active ->
+                    val ctx = getApplication<Application>()
+                    when {
+                        active && !_roamEnabled.value -> {
+                            if (android.provider.Settings.canDrawOverlays(ctx)) {
+                                XenoOverlayService.start(ctx)
+                                _roamEnabled.value = true
+                            } else if (!overlayPromptedThisSession) {
+                                overlayPromptedThisSession = true
+                                _overlayPermissionRequests.tryEmit(Unit)
+                            }
+                        }
+                        !active && _roamEnabled.value -> {
+                            XenoOverlayService.stop(ctx)
+                            _roamEnabled.value = false
+                        }
+                    }
+                }
+        }
     }
+
+    /** Guards the one-time overlay-permission prompt when XENO first needs to roam. */
+    private var overlayPromptedThisSession = false
 
     /** All usable keys in priority order: in-app keys first, then the build-time key. */
     private fun availableKeys(): List<String> {
