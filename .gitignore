@@ -28,3 +28,8 @@ debug.keystore
 /assets/*.crdownload
 /assets/*.mhb
 *.apk
+
+# release signing key (never commit)
+my-upload-key.jks
+*.jks
+keystore.properties
