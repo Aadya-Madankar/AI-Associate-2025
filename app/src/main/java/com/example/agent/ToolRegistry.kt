@@ -34,6 +34,7 @@ import com.example.agent.tools.WebSearchTool
 import com.example.agent.tools.WifiPanelTool
 import com.example.config.PersonaStore
 import com.example.skill.JsonFileSkillStore
+import com.example.skill.Skill
 import com.example.skill.SkillStore
 import com.example.skill.tools.ListSkillsTool
 import com.example.skill.tools.RecallSkillTool
@@ -63,21 +64,50 @@ class ToolRegistry(context: Context) {
     private val appContext: Context = context.applicationContext
 
     /**
+     * The one on-device skill store, shared by the save/list/recall tools AND used to advertise
+     * every saved skill as its own callable tool (see [declarations] / [skillForToolName]).
+     */
+    private val skillStore: SkillStore = JsonFileSkillStore(appContext)
+
+    /**
      * Immutable name → tool map. Built eagerly so [declarations] and [byName] are cheap and
      * thread-safe to read from the WebSocket reader thread and the agent coroutine alike.
      */
-    private val tools: Map<String, AgentTool> = buildTools(appContext)
+    private val tools: Map<String, AgentTool> = buildTools(appContext, skillStore)
         .associateBy { it.declaration.name }
 
     /** Look up a tool by its declared name, or `null` if no such tool is registered. */
     fun byName(name: String): AgentTool? = tools[name]
 
     /**
-     * All tool declarations to advertise in the Gemini Live setup request. Includes the
-     * synthetic [TASK_COMPLETE_DECLARATION] so the model can signal it is finished.
+     * All tool declarations to advertise in the Gemini Live setup request: the built-in tools,
+     * the synthetic [TASK_COMPLETE_DECLARATION], and — the key to "XENO authors its own tools" —
+     * one declaration per **saved skill**, so the model can call a routine it taught itself by
+     * name. Skills saved mid-session appear on the next connect (the Live tool set is fixed at
+     * setup). The [AgentCoordinator] recognises a skill call via [skillForToolName] and expands
+     * it into its steps, each of which is re-gated by the permission engine — a skill grants no
+     * new authority, it only chains existing tools.
      */
     fun declarations(): List<ToolDeclaration> =
-        tools.values.map { it.declaration } + TASK_COMPLETE_DECLARATION
+        tools.values.map { it.declaration } + TASK_COMPLETE_DECLARATION + skillDeclarations()
+
+    /** Advertise each saved skill as a callable tool, skipping any name that collides with a built-in. */
+    private fun skillDeclarations(): List<ToolDeclaration> {
+        val reserved = tools.keys + TASK_COMPLETE
+        return skillStore.all().mapNotNull { skill ->
+            val toolName = skillToolName(skill.name)
+            if (toolName.isBlank() || toolName in reserved) return@mapNotNull null
+            ToolDeclaration(
+                name = toolName,
+                description = "Run your saved skill \"${skill.name}\": ${skill.description}",
+                parametersJsonSchema = EMPTY_OBJECT_SCHEMA
+            )
+        }
+    }
+
+    /** Reverse a skill tool-call name back to the saved [Skill], or null if it isn't a skill. */
+    fun skillForToolName(toolName: String): Skill? =
+        skillStore.all().firstOrNull { skillToolName(it.name) == toolName }
 
     companion object {
         /**
@@ -92,17 +122,25 @@ class ToolRegistry(context: Context) {
             parametersJsonSchema = AgentToolSchemas.TASK_COMPLETE_SCHEMA
         )
 
+        /** A parameter-less (empty-object) JSON schema — used by skill-as-tool declarations. */
+        const val EMPTY_OBJECT_SCHEMA: String = """{"type":"object","properties":{}}"""
+
+        /**
+         * A saved skill's name → a Live-valid tool name: `skill_` + the name lowercased with
+         * every run of non-alphanumeric characters collapsed to `_`. Gemini function names must
+         * match a restricted identifier grammar, but skill names are free-form ("morning routine"),
+         * so they are sanitised here and reversed by [skillForToolName].
+         */
+        fun skillToolName(skillName: String): String =
+            "skill_" + skillName.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
         /**
          * Construct the concrete tool set. Pure stateless tools are created without a context;
-         * intent/hardware tools receive the application context.
-         *
-         * The skill tools share one on-device [SkillStore] (a [JsonFileSkillStore] writing
-         * `nazim_skills.json` in `filesDir`) so save/list/recall all operate on the same file.
-         * All three are SAFE local-memory tools; recall returns a recipe and executes nothing,
-         * so each replayed step still goes through the normal permission gate.
+         * intent/hardware tools receive the application context. The skill tools receive the
+         * registry's shared [skillStore] so save/list/recall and the skill-as-tool advertising
+         * all operate on the same `nazim_skills.json` file.
          */
-        private fun buildTools(context: Context): List<AgentTool> {
-            val skillStore: SkillStore = JsonFileSkillStore(context)
+        private fun buildTools(context: Context, skillStore: SkillStore): List<AgentTool> {
             return listOf(
                 // Read + act on the current screen.
                 GetScreenTool(),

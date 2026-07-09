@@ -8,6 +8,7 @@ import com.example.audit.AuditLog
 import com.example.audit.AuditOutcome
 import com.example.audit.AuditRecord
 import com.example.di.ServiceLocator
+import com.example.skill.Skill
 import com.example.live.LiveFunctionCall
 import com.example.live.LiveFunctionResponse
 import com.example.permission.AgentAction
@@ -97,6 +98,7 @@ class AgentCoordinator(
 
     private val permissionEngine: PermissionEngine = ServiceLocator.permissionEngine
     private val executor: PhoneControlExecutor = ServiceLocator.phoneControlExecutor
+    private val toolRegistry: ToolRegistry = ServiceLocator.toolRegistry
     private val killSwitch: KillSwitch = ServiceLocator.killSwitch
     private val rateLimiter: RateLimiter = ServiceLocator.rateLimiter
     private val auditLog: AuditLog = ServiceLocator.auditLog
@@ -206,9 +208,45 @@ class AgentCoordinator(
         return responses
     }
 
-    private suspend fun handleOne(call: LiveFunctionCall): LiveFunctionResponse {
+    /**
+     * Expand a saved [skill] into its steps and run each as an ordinary, permission-gated tool
+     * call (via [handleOne] with skill expansion disabled, so a skill step naming another skill
+     * is treated as an unknown tool and blocked rather than recursing). Returns one combined
+     * response summarising every step so the model sees what its self-authored tool did.
+     */
+    private suspend fun runSkill(callId: String, skill: Skill): LiveFunctionResponse {
+        val results = ArrayList<Map<String, Any?>>(skill.steps.size)
+        for ((i, step) in skill.steps.withIndex()) {
+            if (killSwitch.isTripped) {
+                results += mapOf("tool" to step.tool, "skipped" to "kill switch active")
+                break
+            }
+            val stepCall = LiveFunctionCall(id = "$callId#$i", name = step.tool, args = step.args)
+            val resp = handleOne(stepCall, expandSkills = false)
+            results += mapOf("tool" to step.tool, "response" to resp.response)
+        }
+        return LiveFunctionResponse(
+            id = callId,
+            name = ToolRegistry.skillToolName(skill.name),
+            response = mapOf("skill" to skill.name, "ranSteps" to results.size, "steps" to results)
+        )
+    }
+
+    private suspend fun handleOne(
+        call: LiveFunctionCall,
+        expandSkills: Boolean = true
+    ): LiveFunctionResponse {
         val callId = call.id ?: ""
         val toolName = call.name
+
+        // --- Saved skill invoked as a tool: expand into its steps and run each through the SAME
+        // gate. A skill is a macro over existing tools — it grants no new authority. expandSkills
+        // is false for the steps themselves, so a skill can't recursively invoke another skill. ---
+        if (expandSkills) {
+            val skill = toolRegistry.skillForToolName(toolName)
+            if (skill != null) return runSkill(callId, skill)
+        }
+
         val action = mapper.toAgentAction(call)
 
         // --- task_complete is a control signal: end the loop, reset per-task guards. ---
