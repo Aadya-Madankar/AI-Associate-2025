@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.BuildConfig
 import com.example.audio.AudioCapture
+import com.example.audio.AudioRouter
 import com.example.audio.AudioStreamPlayer
 import com.example.core.ChatMessage
 import com.example.core.CompanionState
@@ -64,6 +65,9 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val MISSING_KEY_SENTINEL = "MY_GEMINI_API_KEY"
 
+        /** Cap on assembling the memory boot context so a slow embed/DB read never stalls connect. */
+        const val MEMORY_BOOT_TIMEOUT_MS = 1500L
+
         /**
          * Hidden trigger sent the instant the session is ready so XENO speaks FIRST and opens in
          * Hindi. Sent as a turn (not shown in the transcript); XENO must not read it aloud.
@@ -100,6 +104,10 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
     private val _isMicActive = MutableStateFlow(false)
     val isMicActive: StateFlow<Boolean> = _isMicActive.asStateFlow()
 
+    // -- Voice output route: true = loud speaker ("big"), false = earpiece ("small") -------
+    private val _speakerLoud = MutableStateFlow(true)
+    val speakerLoud: StateFlow<Boolean> = _speakerLoud.asStateFlow()
+
     // -- Error surface ------------------------------------------------------
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -131,6 +139,7 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
     private var liveClient: GeminiLiveClient? = null
     private val capture = AudioCapture()
     private val player = AudioStreamPlayer()
+    private val audioRouter = AudioRouter(app)
 
     // -- Phone-control agent ------------------------------------------------
     /** Bridges Gemini tool calls to the permission / execution / audit stack. */
@@ -319,6 +328,13 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Toggle XENO's voice between the loud speaker ("big") and the quiet earpiece ("small"). */
+    fun toggleSpeaker() {
+        val loud = !_speakerLoud.value
+        _speakerLoud.value = loud
+        audioRouter.setLoud(loud)
+    }
+
     /** Sets the autonomy mode (from the mode pill). Persisted via DataStore. */
     fun setAutonomyMode(mode: AutonomyMode) = agentCoordinator.setMode(mode)
 
@@ -453,24 +469,44 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
         liveClient = client
 
         agentCoordinator.beginTask()
-        client.connect(
-            systemInstruction = buildSystemInstruction(persona.systemInstruction, selfDirective.value),
-            voiceName = persona.voiceName,
-            tools = agentTools,
-            listener = SessionListener(client)
-        )
+        // Assemble the on-device memory boot context off the connect path, time-boxed, so a slow
+        // embedding/DB read can never delay or block opening the socket. Then connect. If a newer
+        // connect/teardown superseded this client meanwhile, drop it.
+        viewModelScope.launch {
+            val memoryBlock = runCatching {
+                kotlinx.coroutines.withTimeoutOrNull(MEMORY_BOOT_TIMEOUT_MS) {
+                    ServiceLocator.memoryStore.assembleBootContext()
+                }
+            }.getOrNull().orEmpty()
+            if (liveClient !== client) return@launch
+            client.connect(
+                systemInstruction = buildSystemInstruction(
+                    persona.systemInstruction, selfDirective.value, memoryBlock
+                ),
+                voiceName = persona.voiceName,
+                tools = agentTools,
+                listener = SessionListener(client)
+            )
+        }
     }
 
     /**
-     * Folds XENO's persisted self-directive (written via `update_self_prompt`) onto the base
-     * persona instruction, so XENO's own evolving notes shape every new session.
+     * Folds XENO's on-device [memoryBlock] (what it remembers about the user) and its persisted
+     * self-directive (written via `update_self_prompt`) onto the base persona instruction, so both
+     * XENO's memory and its own evolving notes shape every new session.
      */
-    private fun buildSystemInstruction(base: String, selfNote: String): String {
+    private fun buildSystemInstruction(base: String, selfNote: String, memoryBlock: String = ""): String {
+        val out = StringBuilder(base)
+        val mem = memoryBlock.trim()
+        if (mem.isNotEmpty()) out.append("\n\n").append(mem)
         val note = selfNote.trim()
-        if (note.isEmpty()) return base
-        return base +
-            "\n\nYOUR OWN NOTES TO YOURSELF (you wrote these earlier with update_self_prompt — " +
-            "honor them as part of who you are):\n" + note
+        if (note.isNotEmpty()) {
+            out.append(
+                "\n\nYOUR OWN NOTES TO YOURSELF (you wrote these earlier with update_self_prompt — " +
+                    "honor them as part of who you are):\n"
+            ).append(note)
+        }
+        return out.toString()
     }
 
     /** Tears down the live session and releases all audio resources. */
@@ -490,6 +526,8 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
         if (trimmed.isEmpty()) return
 
         appendMessage(ChatMessage(sender = Sender.USER, text = trimmed))
+        // Capture the typed turn into episodic memory (voice turns aren't transcribed on-device).
+        agentCoordinator.noteUserUtterance(trimmed)
         // A new model turn will follow this user turn.
         currentTurnHasMessage = false
 
@@ -532,6 +570,7 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
     private fun stopEverything() {
         capture.stop()
         player.stop()
+        audioRouter.reset()
         liveClient?.close()
         liveClient = null
         runCatching { VoiceService.stop(getApplication()) }
@@ -612,6 +651,7 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
                 setupCompleted = true
                 _isConnected.value = true
                 player.start()
+                audioRouter.setLoud(_speakerLoud.value)   // apply the chosen voice route
                 beginCapture(client)
                 _companionState.value = CompanionState.LISTENING
                 // XENO speaks FIRST, opening in Hindi. This cue is a hidden trigger turn — it is

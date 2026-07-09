@@ -44,6 +44,8 @@ import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.ScreenShare
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Hearing
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -115,6 +117,7 @@ fun LiveScreen(viewModel: XenoViewModel) {
     val agentStatus by viewModel.agentStatus.collectAsStateWithLifecycle()
     val visionState by viewModel.visionState.collectAsStateWithLifecycle()
     val roamEnabled by viewModel.roamEnabled.collectAsStateWithLifecycle()
+    val speakerLoud by viewModel.speakerLoud.collectAsStateWithLifecycle()
 
     var showPersonaSwitcher by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
@@ -320,6 +323,11 @@ fun LiveScreen(viewModel: XenoViewModel) {
         ) {
             XenoGlyph()
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlassIconButton(
+                    if (speakerLoud) Icons.Rounded.VolumeUp else Icons.Rounded.Hearing,
+                    if (speakerLoud) "Voice on loud speaker — tap for earpiece"
+                    else "Voice on earpiece — tap for loud speaker"
+                ) { viewModel.toggleSpeaker() }
                 GlassIconButton(Icons.Rounded.Settings, "Settings") { showSettings = true }
                 GlassIconButton(Icons.Rounded.People, "Companion") { showPersonaSwitcher = true }
             }
