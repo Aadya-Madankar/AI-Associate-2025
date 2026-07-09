@@ -169,8 +169,8 @@ class NazimExpressionController(seed: Long = 4242L) {
 
     /**
      * Layered micro head motion for a living idle, scaled by the current idle animation's
-     * energy. Returns (yawDegrees, pitchDegrees, verticalBob). Mirrors
-     * `LipSyncController.headSway` so the renderer can apply it the same way `AvatarView` does.
+     * energy. Returns (yawDegrees, pitchDegrees, verticalBob); the renderer applies it to the
+     * head node each frame.
      */
     fun headSway(): Triple<Float, Float, Float> {
         val energy = when (idle) {

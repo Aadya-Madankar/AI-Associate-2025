@@ -25,8 +25,7 @@ private const val CROSS_FADE_SECONDS = 0.35f
 /**
  * The SceneView/Filament-backed renderer for the **Nazim** MetaHuman.
  *
- * Loads `assets/nazim.glb` via the **exact** SceneView 2.3.3 API used by
- * `com.example.avatar.AvatarView` (`rememberEngine` / `rememberModelLoader` /
+ * Loads `assets/nazim.glb` via the SceneView 2.3.3 API (`rememberEngine` / `rememberModelLoader` /
  * `rememberEnvironmentLoader` / `rememberNodes` + [io.github.sceneview.Scene]; embedded textures
  * load automatically). Each frame it independently drives three Filament subsystems on the loaded
  * model:
@@ -295,8 +294,8 @@ private class NazimAnimationDriver private constructor(
  * controller weight keys onto that entity's morph-target index layout. Built once and reused every
  * frame to avoid per-frame allocation and name lookups.
  *
- * Mirrors the `FaceMorphBinding` pattern in `AvatarView`, but unions the viseme and expression key
- * sets so both controllers can write into one `setMorphWeights` call.
+ * Unions the viseme and expression key sets so both controllers can write into one
+ * `setMorphWeights` call.
  */
 private class NazimFaceMorphBinding(
     private val entity: Int,

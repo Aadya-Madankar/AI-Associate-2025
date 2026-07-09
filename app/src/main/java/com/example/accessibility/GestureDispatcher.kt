@@ -103,10 +103,5 @@ class GestureDispatcher(
         const val TAP_DURATION_MS = 50L
         const val LONG_PRESS_DURATION_MS = 600L
         const val SWIPE_DURATION_MS = 300L
-
-        // ponytail: unused since taps no longer wait on the roam avatar (fire-and-forget
-        // OverlayBus.emitTap above) — kept as a public constant in case a caller still wants
-        // the old lead-time value; delete if nothing references it after a grep sweep.
-        const val ROAM_TAP_LEAD_MS = 340L
     }
 }

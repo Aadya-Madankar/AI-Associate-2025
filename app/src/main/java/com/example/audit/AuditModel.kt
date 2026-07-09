@@ -13,8 +13,8 @@ enum class AuditOutcome { ALLOWED_AUTO, ALLOWED_CONFIRMED, BLOCKED, DENIED_BY_US
 /**
  * One append-only audit record — the Room row *is* the contract type, used directly by
  * [AuditDao] and [RoomAuditLog]. Per the privacy rules (ARCHITECTURE.md §8) this NEVER
- * stores raw field contents — only a [paramsHash] of the literal arguments — so the log
- * itself can't leak message bodies, numbers, or amounts.
+ * stores raw field contents — [paramsHash] is a random per-entry token, not derived from
+ * the arguments — so the log itself can't leak message bodies, numbers, or amounts.
  *
  * [mode] and [outcome] are enums but persist as their stable `name` string via
  * [AuditConverters], so reordering an enum can never silently re-map historical rows.
@@ -44,7 +44,7 @@ data class AuditRecord(
     @ColumnInfo(name = "targetApp")
     val targetApp: String?,
 
-    /** SHA-256 hex of the literal params — NEVER the raw values. */
+    /** Random per-entry token — never derived from or containing the raw params. */
     @ColumnInfo(name = "paramsHash")
     val paramsHash: String,
 

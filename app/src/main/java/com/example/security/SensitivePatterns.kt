@@ -150,8 +150,8 @@ object SensitivePatterns {
 
     /**
      * CVV / CVC: an isolated 3–4 digit run. Anchored so it only matches when standing
-     * alone (a label or [RedactionPolicy.redactShortDigitRuns] gate should accompany
-     * this to avoid eating ordinary small numbers).
+     * alone (a nearby sensitive label should accompany this to avoid eating ordinary
+     * small numbers).
      */
     val CVV_VALUE: Regex = Regex(
         """\b\d{3,4}\b"""
@@ -239,9 +239,8 @@ object SensitivePatterns {
     )
 
     /**
-     * Email address. Considered sensitive only in strict mode / when
-     * [RedactionPolicy.redactEmails] is enabled (it is PII but frequently benign on a
-     * UI, hence opt-in per stream guidance "emails optional").
+     * Email address. Redacted under the strict on-device policy (it is PII but frequently
+     * benign on a UI).
      */
     val EMAIL_VALUE: Regex = Regex(
         """(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b"""
@@ -252,7 +251,7 @@ object SensitivePatterns {
      * and carry a very low false-positive rate (card numbers, IBANs, long digit runs,
      * opaque tokens including letters-only long runs, and seed phrases). Short numeric
      * runs ([OTP_VALUE]/[CVV_VALUE]) and [EMAIL_VALUE] are intentionally excluded here
-     * and gated behind [RedactionPolicy].
+     * and only applied under the label-gated short-run set.
      */
     val alwaysValuePatterns: List<Regex> = listOf(
         CARD_NUMBER_VALUE,
@@ -266,8 +265,7 @@ object SensitivePatterns {
     /**
      * Short-run value patterns (OTP / CVV / short alphanumeric-code shaped). High recall
      * but also higher false-positive risk on ordinary small numbers/codes, so these are
-     * only applied when a sensitive label is present nearby, on a password/secure field,
-     * or when policy opts in via [RedactionPolicy.redactShortDigitRuns].
+     * only applied when a sensitive label is present nearby, or on a password/secure field.
      *
      * [SHORT_ALNUM_CODE] catches short mixed letter+digit codes (Steam-Guard / 2FA /
      * sign-in / recovery codes such as `KT4QW`) that the digit-only patterns miss; it

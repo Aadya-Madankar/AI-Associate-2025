@@ -105,7 +105,6 @@ class XenoOverlayService : Service(),
     override fun onCreate() {
         super.onCreate()
         startInForeground()
-        OverlayBus.setRoamActive(true)
 
         savedStateController.performAttach()
         savedStateController.performRestore(null)
@@ -259,7 +258,6 @@ class XenoOverlayService : Service(),
     }
 
     override fun onDestroy() {
-        OverlayBus.setRoamActive(false)
         moveAnimator?.cancel()
         settleJob?.cancel()
         scope.cancel()
