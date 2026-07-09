@@ -204,5 +204,5 @@ private fun Modifier.stopPillGlass(stop: Color, breath: () -> Float): Modifier =
  */
 private fun Modifier.semanticsStop(): Modifier = semantics {
     role = Role.Button
-    onClick(label = "Stop the agent", action = null)
+    onClick(label = "Stop and close the connection", action = null)
 }

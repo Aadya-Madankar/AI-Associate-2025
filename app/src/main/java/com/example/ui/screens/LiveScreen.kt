@@ -276,11 +276,17 @@ fun LiveScreen(viewModel: XenoViewModel) {
             )
 
             Spacer(Modifier.height(14.dp))
-            Text(
-                text = captionFor(companionState, isConnected),
-                color = XenoWarm.TextSecondary,
-                fontSize = 13.sp
-            )
+            // While live, STOP replaces the caption: one tap halts the agent AND closes the
+            // connection. In the flow (not a floating pill), so it never overlaps other content.
+            if (isConnected || agentStatus.active) {
+                KillSwitchOverlay(visible = true, onStop = viewModel::panicStop)
+            } else {
+                Text(
+                    text = captionFor(companionState, isConnected),
+                    color = XenoWarm.TextSecondary,
+                    fontSize = 13.sp
+                )
+            }
             Spacer(Modifier.height(26.dp))
         }
 
@@ -316,14 +322,6 @@ fun LiveScreen(viewModel: XenoViewModel) {
         if (showSettings) {
             SettingsSheet(onDismiss = { showSettings = false }, viewModel = viewModel)
         }
-        KillSwitchOverlay(
-            visible = agentStatus.active,
-            onStop = viewModel::stopAgent,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .navigationBarsPadding()
-                .padding(end = 16.dp)
-        )
         ConfirmSheet(
             request = pendingConfirm,
             onDecision = { scope, allowed -> viewModel.resolveConfirm(allowed, scope) }

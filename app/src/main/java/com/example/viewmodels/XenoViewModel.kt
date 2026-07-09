@@ -297,6 +297,15 @@ class XenoViewModel(app: Application) : AndroidViewModel(app) {
     /** Panic STOP: trips the kill switch, halting any in-flight agent task. */
     fun stopAgent() = ServiceLocator.killSwitch.trigger(KillReason.USER_STOP)
 
+    /**
+     * The STOP button: halt any in-flight agent action AND close the live connection, so one tap
+     * ends everything (kill switch first for an immediate halt, then a full session teardown).
+     */
+    fun panicStop() {
+        ServiceLocator.killSwitch.trigger(KillReason.USER_STOP)
+        stopSession()
+    }
+
     /** Toggle the camera stream (the world). Caller must already hold CAMERA permission. */
     fun toggleCameraVision() {
         if (_visionState.value == VisionState.CAMERA) {
