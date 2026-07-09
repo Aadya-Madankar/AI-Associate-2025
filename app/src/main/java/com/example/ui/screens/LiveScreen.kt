@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,6 +85,7 @@ import com.example.permission.AutonomyMode
 import com.example.ui.agent.ConfirmSheet
 import com.example.ui.agent.KillSwitchOverlay
 import com.example.ui.agent.SettingsSheet
+import com.example.ui.components.GlassShatter
 import com.example.ui.components.PersonaSwitcher
 import com.example.ui.theme.XenoWarm
 import com.example.viewmodels.XenoViewModel
@@ -116,6 +118,14 @@ fun LiveScreen(viewModel: XenoViewModel) {
 
     var showPersonaSwitcher by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+
+    // Glass-shatter burst when XENO breaks out of the app to roam (roam false -> true).
+    var shatterKey by remember { mutableStateOf(0) }
+    var prevRoam by remember { mutableStateOf(false) }
+    LaunchedEffect(roamEnabled) {
+        if (roamEnabled && !prevRoam) shatterKey++
+        prevRoam = roamEnabled
+    }
 
     // Accessibility ("control access") status, refreshed each time the user returns to the app
     // (e.g. from the system Accessibility settings the chip deep-links to).
@@ -314,6 +324,9 @@ fun LiveScreen(viewModel: XenoViewModel) {
                 GlassIconButton(Icons.Rounded.People, "Companion") { showPersonaSwitcher = true }
             }
         }
+
+        // 5) Glass shatter — plays over everything when XENO breaks out to roam.
+        GlassShatter(trigger = shatterKey, modifier = Modifier.fillMaxSize())
 
         // -- Modal sheets / overlays (kept) --
         if (showPersonaSwitcher) {
