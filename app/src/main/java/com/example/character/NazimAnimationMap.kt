@@ -43,8 +43,10 @@ object NazimAnimationMap {
             "stand", "Stand", "neutral", "Neutral", "rest", "T-Pose"
         ),
         NazimState.LISTENING to listOf(
+            // Humanoid-rig clips first (a real Nazim GLB uses these); a placeholder rig with
+            // none of them rests on the calm breathing Idle rather than a stiff "Standing" pose.
             "listening", "Listening", "listen", "Listen", "attentive", "Attentive",
-            "idle_alert", "alert_idle", "AlertIdle", "nod", "Nod", "Standing",
+            "idle_alert", "alert_idle", "AlertIdle",
             // graceful generic idle fallbacks
             "idle", "Idle", "breathing_idle", "Armature|Idle", "mixamo.com"
         ),
@@ -56,8 +58,10 @@ object NazimAnimationMap {
             "idle", "Idle", "breathing_idle", "Armature|Idle", "mixamo.com"
         ),
         NazimState.SPEAKING to listOf(
+            // Humanoid talking clips first; a placeholder rig with none of them rests on the
+            // calm Idle rather than looping a literal "Yes" nod every time XENO speaks.
             "talking", "Talking", "talk", "Talk", "speaking", "Speaking",
-            "Yes", "speak", "Speak", "gesture", "Gesture", "gesturing", "Gesturing",
+            "speak", "Speak", "gesture", "Gesture", "gesturing", "Gesturing",
             "talking_gesture", "TalkingGesture", "explain", "Explain",
             // graceful generic idle fallbacks
             "idle", "Idle", "breathing_idle", "Armature|Idle", "mixamo.com"
