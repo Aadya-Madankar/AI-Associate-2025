@@ -21,3 +21,10 @@ debug.keystore
 /assets/*.zip
 /assets/*.crdownload
 /assets/gavin_reed_-_detroit_become_human.glb
+
+# scratch + raw asset downloads (keep the shipped avatar app/src/main/assets/nazim.glb)
+.superpowers/
+/assets/*.zip
+/assets/*.crdownload
+/assets/*.mhb
+*.apk

@@ -3,7 +3,7 @@
 > **One line:** Xeno Live is a voice-first Android AI companion — embodied by a photoreal
 > MetaHuman named **Nazim** — that talks with you in real time *and*, with your explicit
 > permission, operates your phone for you (opens apps, types, toggles settings, runs
-> multi-step tasks) under a Claude-style permission system that keeps secure/private
+> multi-step tasks) under a assistant-style permission system that keeps secure/private
 > things strictly off-limits.
 
 Status of repo today: a Google AI Studio scaffold (Kotlin + Jetpack Compose + Material 3)
@@ -17,7 +17,7 @@ wired to the **Gemini Live API** for realtime speech-to-speech. It can *talk*. I
 | Half | State | What it is |
 | --- | --- | --- |
 | **Companion** | Exists (upgrade) | Gemini Live realtime voice S2S, transcript, avatar. Upgrade: replace the abstract Aurora orb with the **Nazim** MetaHuman; collapse "random personas" into the single Nazim identity. |
-| **Agent** | To build | Accessibility-driven phone control + a Claude-style permission/autonomy system + a voice "command mode" that runs multi-step tasks on the device. |
+| **Agent** | To build | Accessibility-driven phone control + a assistant-style permission/autonomy system + a voice "command mode" that runs multi-step tasks on the device. |
 
 ---
 
@@ -61,14 +61,14 @@ action is blocked and the agent says so out loud.
 
 ---
 
-## 4. Permission & autonomy modes (Claude-style)
+## 4. Permission & autonomy modes (assistant-style)
 
 | Mode | Behavior | Analogy |
 | --- | --- | --- |
-| **Ask** (default) | Confirm every action with a preview sheet | Claude "ask each time" |
-| **Ask-less / Auto** | Auto-run *Safe* actions; confirm *Needs-confirm*; block *Blocked* | Claude "auto-accept edits" |
-| **Bypass** | Run everything except *Blocked*; persistent kill-switch on screen | Claude "bypass permissions / YOLO" |
-| **Plan / Preview** | Generate and show the full action sequence; execute nothing | Claude "plan mode" |
+| **Ask** (default) | Confirm every action with a preview sheet | "ask each time" |
+| **Ask-less / Auto** | Auto-run *Safe* actions; confirm *Needs-confirm*; block *Blocked* | "auto-accept edits" |
+| **Bypass** | Run everything except *Blocked*; persistent kill-switch on screen | "bypass permissions / YOLO" |
+| **Plan / Preview** | Generate and show the full action sequence; execute nothing | "plan mode" |
 
 Cross-cutting safety: per-app + per-action **allow/deny lists**, **session scoping**
 ("allow for this task only"), a full **audit log** of every observed screen + action taken,

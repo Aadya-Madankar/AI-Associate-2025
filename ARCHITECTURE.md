@@ -2,7 +2,7 @@ I now have full grounding in the actual code. Writing the deliverable.
 
 # Xeno Live → Voice-Driven Phone-Control Agent: Architecture & Build Plan
 
-> A blueprint for evolving the existing Gemini-powered "Xeno Live" voice companion into a permission-gated, voice-driven phone-control agent — restricted to non-sensitive actions, on the user's own device, with explicit consent and a Claude-Code-style autonomy model.
+> A blueprint for evolving the existing Gemini-powered "Xeno Live" voice companion into a permission-gated, voice-driven phone-control agent — restricted to non-sensitive actions, on the user's own device, with explicit consent and a assistant-style autonomy model.
 
 ---
 
@@ -57,7 +57,7 @@ A **hands-free, voice-driven phone-control agent** built on top of Xeno Live. Th
 **Core principles:**
 
 1. **Voice-first.** The existing duplex Gemini Live loop is the conversation surface; phone actions are Gemini Live **tool calls**.
-2. **Permission-gated (Claude-Code-style).** Four autonomy modes (Ask / Ask-less / Auto / Bypass) layered over a deny-list + forced-ask list + secure-context block that override **every** mode.
+2. **Permission-gated (assistant-style).** Four autonomy modes (Ask / Ask-less / Auto / Bypass) layered over a deny-list + forced-ask list + secure-context block that override **every** mode.
 3. **Non-sensitive by design.** A risk-classified action taxonomy. Banking/payment/2FA/password/security screens are hard-blocked; irreversible actions (send money, place call, delete) always route to explicit confirm and never auto-run.
 4. **Visible & interruptible.** A persistent foreground-service notification + overlay shows the current step with a one-tap STOP. An append-only audit log records every action.
 5. **Honest about constraints.** Google Play's AccessibilityService policy (enforced **Jan 28, 2026**) prohibits autonomous "plan and execute" agents — so the autonomous build is **sideload / dev-distribution**, and any Play build is deterministic-rule-only.
@@ -160,7 +160,7 @@ The hard parts already exist (16 kHz capture, 24 kHz playback w/ barge-in, serve
 
 ## 4. The permission & autonomy system (the heart of the product)
 
-Maps Claude Code's permission model onto phone actions. **Layering rule (copy verbatim): modes set the baseline; deny rules, forced-ask rules, and the secure-context block apply in EVERY mode — including Bypass.**
+Maps a modern AI assistant's permission model onto phone actions. **Layering rule (copy verbatim): modes set the baseline; deny rules, forced-ask rules, and the secure-context block apply in EVERY mode — including Bypass.**
 
 ### 4.1 Autonomy modes
 
@@ -168,7 +168,7 @@ Maps Claude Code's permission model onto phone actions. **Layering rule (copy ve
 enum class AutonomyMode { ASK, ASK_LESS, AUTO, BYPASS, PLAN }
 ```
 
-| Mode | Behavior | Claude Code analog |
+| Mode | Behavior | Analog |
 |---|---|---|
 | **ASK** (default) | Reads freely; **confirm every action**. | `default` |
 | **ASK-LESS** | Auto-run a fixed SAFE whitelist; confirm everything else. | `acceptEdits` |
@@ -184,7 +184,7 @@ Persist mode in DataStore; surface as a Compose mode pill; cycle via a gesture.
 data class AgentAction(val type: ActionType, val targetApp: String?, val params: Map<String,Any>, val reversible: Boolean)
 ```
 
-**Classifier order (first-match-wins, mirrors Claude Code):**
+**Classifier order (first-match-wins, mirrors modern AI assistants):**
 1. Global **denylist** (apps + action types) → hard deny.
 2. **Forced-ask** list (send-money, delete-all, place-call) → always prompt, even in BYPASS.
 3. **Secure-context detector** → block / escalate.
