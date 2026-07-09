@@ -1,4 +1,5 @@
 package com.example.ui.agent
+import android.content.Intent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,6 +66,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.audit.AuditOutcome
 import com.example.audit.AuditRecord
 import com.example.di.ServiceLocator
+import androidx.compose.ui.platform.LocalContext
+import com.example.accessibility.AccessibilityAvailability
 import com.example.permission.AutonomyMode
 import com.example.ui.theme.XenoWarm
 import com.example.viewmodels.XenoViewModel
@@ -84,6 +87,7 @@ import com.example.vision.VisionState
 @Composable
 fun SettingsSheet(onDismiss: () -> Unit, viewModel: XenoViewModel) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
     val autonomyMode by viewModel.autonomyMode.collectAsStateWithLifecycle()
     val apiKeys by viewModel.apiKeys.collectAsStateWithLifecycle()
     val visionState by viewModel.visionState.collectAsStateWithLifecycle()
@@ -103,7 +107,20 @@ fun SettingsSheet(onDismiss: () -> Unit, viewModel: XenoViewModel) {
     ) {
         SettingsSheetContent(
             autonomyMode = autonomyMode,
-            onSetMode = viewModel::setAutonomyMode,
+            onSetMode = { newMode ->
+                viewModel.setAutonomyMode(newMode)
+                // Auto/Bypass need the accessibility grant to act — prompt for it if it's off.
+                if ((newMode == AutonomyMode.AUTO || newMode == AutonomyMode.BYPASS) &&
+                    !AccessibilityAvailability.isServiceEnabled(context)
+                ) {
+                    runCatching {
+                        context.startActivity(
+                            AccessibilityAvailability.settingsIntent()
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            },
             onKillSwitch = viewModel::stopAgent,
             auditRecords = auditRecords,
             apiKeys = apiKeys,

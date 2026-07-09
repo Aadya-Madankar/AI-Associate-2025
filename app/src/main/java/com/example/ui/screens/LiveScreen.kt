@@ -171,7 +171,19 @@ fun LiveScreen(viewModel: XenoViewModel) {
             // Headroom so the copy sits just under XENO, never on top of it.
             Spacer(Modifier.height(348.dp))
 
-            ModeChip(mode = autonomyMode, onCycle = viewModel::setAutonomyMode)
+            ModeChip(mode = autonomyMode, onCycle = { newMode ->
+                viewModel.setAutonomyMode(newMode)
+                // Auto/Bypass let XENO act on its own — those need the accessibility grant to
+                // tap & type. If it isn't on yet, deep-link the user to grant it right away.
+                if ((newMode == AutonomyMode.AUTO || newMode == AutonomyMode.BYPASS) && !a11yEnabled) {
+                    runCatching {
+                        context.startActivity(
+                            AccessibilityAvailability.settingsIntent()
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            })
             Spacer(Modifier.height(18.dp))
             Text(
                 text = promptFor(companionState),
