@@ -23,6 +23,12 @@ private const val TAG = "NazimRenderer"
 private const val CROSS_FADE_SECONDS = 0.35f
 
 /**
+ * Base yaw (degrees) so the rigged figure faces the user. glTF humanoids commonly export
+ * facing +Z (away from the camera); 180° turns them to front. Head-sway is applied on top.
+ */
+private const val MODEL_FACING_YAW = 180f
+
+/**
  * The SceneView/Filament-backed renderer for the **Nazim** MetaHuman.
  *
  * Loads `assets/nazim.glb` via the SceneView 2.3.3 API (`rememberEngine` / `rememberModelLoader` /
@@ -91,9 +97,9 @@ internal fun NazimRenderer(
             val modelNode = ModelNode(
                 modelInstance = modelInstance,
                 autoAnimate = false,
-                // Frame the whole figure with headroom (a tall humanoid overflows the default
-                // camera at 1.0). Tuned so the avatar sits centered with margin.
-                scaleToUnits = 0.5f,
+                // Frame the whole standing figure with headroom (a tall humanoid overflows the
+                // default camera). Tuned so head-to-feet sits centered with margin.
+                scaleToUnits = 0.34f,
                 centerOrigin = Position(0f, 0f, 0f)
             )
             add(modelNode)
@@ -242,9 +248,13 @@ private class NazimAnimationDriver private constructor(
         animator.updateBoneMatrices()
     }
 
-    /** Resolve [state] to a concrete clip index using [NazimAnimationMap]; -1 if none match. */
+    /**
+     * Resolve [state] to a concrete clip index using [NazimAnimationMap]. If no candidate name
+     * matches (a rig with unconventional clip names), fall back to the model's first clip so it
+     * still animates rather than freezing on the bind pose.
+     */
     private fun resolveClipIndex(state: NazimState): Int {
-        val name = NazimAnimationMap.resolveClip(state, clipNames) ?: return -1
+        val name = NazimAnimationMap.resolveClip(state, clipNames) ?: return if (clipCount > 0) 0 else -1
         val idx = clipNames.indexOfFirst { it.equals(name, ignoreCase = true) }
         return if (idx >= 0) idx else 0
     }
@@ -396,7 +406,7 @@ private fun applyHeadSway(
 ) {
     val root = childNodes.firstOrNull { it is ModelNode } ?: return
     val (yawDeg, pitchDeg, bob) = sway
-    root.rotation = Rotation(x = pitchDeg, y = yawDeg, z = 0f)
+    root.rotation = Rotation(x = pitchDeg, y = MODEL_FACING_YAW + yawDeg, z = 0f)
     val pos = root.position
     root.position = Position(x = pos.x, y = bob * 0.02f, z = pos.z)
 }
